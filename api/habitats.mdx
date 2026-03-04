@@ -1,0 +1,243 @@
+---
+title: 'Habitats API'
+description: 'Access information about zoo habitats and their resident animals'
+---
+
+## Overview
+
+The Habitats API provides access to information about the different habitats in Zoo Arcadia, including the Savannah, Jungle, and Marshlands areas.
+
+## List All Habitats
+
+<Note>
+  Returns a list of all habitats in the zoo with their descriptions and associated media.
+</Note>
+
+```http
+GET /api/habitats
+```
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of habitat objects
+  
+  <ResponseField name="id_habitat" type="integer">
+    Unique identifier for the habitat
+  </ResponseField>
+  
+  <ResponseField name="habitat_name" type="string">
+    Name of the habitat (e.g., "Savannah", "Jungle", "Marshlands")
+  </ResponseField>
+  
+  <ResponseField name="description_habitat" type="string">
+    Detailed description of the habitat
+  </ResponseField>
+  
+  <ResponseField name="media_path" type="string">
+    URL path to the habitat's image (original size)
+  </ResponseField>
+  
+  <ResponseField name="media_path_medium" type="string">
+    URL path to the habitat's medium-sized image
+  </ResponseField>
+  
+  <ResponseField name="media_path_large" type="string">
+    URL path to the habitat's large-sized image
+  </ResponseField>
+  
+  <ResponseField name="animal_count" type="integer" optional>
+    Number of animals residing in this habitat (when requested)
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl https://zoo-arcadia.example.com/api/habitats
+```
+
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/habitats')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://zoo-arcadia.example.com/api/habitats')
+habitats = response.json()
+print(habitats)
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_habitat": 1,
+      "habitat_name": "Savannah",
+      "description_habitat": "Experience the African plains with our lions, zebras, and giraffes in their natural savannah environment.",
+      "media_path": "/uploads/habitats/savannah.jpg",
+      "media_path_medium": "/uploads/habitats/savannah-medium.jpg",
+      "media_path_large": "/uploads/habitats/savannah-large.jpg"
+    },
+    {
+      "id_habitat": 2,
+      "habitat_name": "Jungle",
+      "description_habitat": "Explore the dense tropical rainforest home to gorillas, parrots, and exotic reptiles.",
+      "media_path": "/uploads/habitats/jungle.jpg",
+      "media_path_medium": "/uploads/habitats/jungle-medium.jpg",
+      "media_path_large": "/uploads/habitats/jungle-large.jpg"
+    },
+    {
+      "id_habitat": 3,
+      "habitat_name": "Marshlands",
+      "description_habitat": "Discover wetland species including crocodiles, flamingos, and aquatic birds.",
+      "media_path": "/uploads/habitats/marshlands.jpg",
+      "media_path_medium": "/uploads/habitats/marshlands-medium.jpg",
+      "media_path_large": "/uploads/habitats/marshlands-large.jpg"
+    }
+  ]
+}
+```
+
+## Get Habitat by ID
+
+<Note>
+  Retrieves detailed information about a specific habitat including its description and media.
+</Note>
+
+```http
+GET /api/habitats/{id}
+```
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the habitat
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Habitat object containing detailed information
+  
+  <ResponseField name="id_habitat" type="integer">
+    Unique identifier for the habitat
+  </ResponseField>
+  
+  <ResponseField name="habitat_name" type="string">
+    Name of the habitat
+  </ResponseField>
+  
+  <ResponseField name="description_habitat" type="string">
+    Detailed description of the habitat
+  </ResponseField>
+  
+  <ResponseField name="media_path" type="string">
+    URL path to the habitat's image (original size)
+  </ResponseField>
+  
+  <ResponseField name="media_path_medium" type="string">
+    URL path to the habitat's medium-sized image
+  </ResponseField>
+  
+  <ResponseField name="media_path_large" type="string">
+    URL path to the habitat's large-sized image
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl https://zoo-arcadia.example.com/api/habitats/1
+```
+
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/habitats/1')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://zoo-arcadia.example.com/api/habitats/1')
+habitat = response.json()
+print(habitat)
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id_habitat": 1,
+    "habitat_name": "Savannah",
+    "description_habitat": "Experience the African plains with our lions, zebras, and giraffes in their natural savannah environment.",
+    "media_path": "/uploads/habitats/savannah.jpg",
+    "media_path_medium": "/uploads/habitats/savannah-medium.jpg",
+    "media_path_large": "/uploads/habitats/savannah-large.jpg"
+  }
+}
+```
+
+## Error Responses
+
+### Invalid Habitat ID
+
+When an invalid or non-numeric ID is provided:
+
+```json
+{
+  "error": true,
+  "message": "Invalid habitat ID"
+}
+```
+
+**HTTP Status Code:** `400 Bad Request`
+
+### Habitat Not Found
+
+When the requested habitat ID does not exist:
+
+```json
+{
+  "error": true,
+  "message": "Habitat not found"
+}
+```
+
+**HTTP Status Code:** `404 Not Found`
+
+### Resource Not Found
+
+When the habitats endpoint is not available:
+
+```json
+{
+  "error": true,
+  "message": "Resource 'habitats' not found"
+}
+```
+
+**HTTP Status Code:** `404 Not Found`

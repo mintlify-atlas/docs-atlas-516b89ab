@@ -1,80 +1,241 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get Zoo Arcadia up and running in minutes with Docker or local development environment
 ---
 
-## Get started in three steps
+This guide will help you get Zoo Arcadia running on your machine in just a few minutes. Choose between Docker (recommended) or local setup.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, ensure you have the following installed:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- **PHP** 7.4+ (PHP 8.x recommended)
+- **Composer** - PHP dependency manager
+- **Node.js** and **npm** (includes npx)
+- **MySQL/MariaDB** - Database server
+- **Docker Desktop** (optional, for Docker setup)
 
-### Step 2: Deploy your changes
+## Quick Setup Options
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Tabs>
+  <Tab title="Docker (Recommended)">
+    Docker provides the fastest and most consistent setup experience.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    <Steps>
+      <Step title="Clone the repository">
+        ```bash
+        git clone https://github.com/dumitrusf/zoo-Arcadia.git
+        cd zoo-ARCADIA
+        ```
+      </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+      <Step title="Switch to Docker configuration">
+        ```bash
+        .\switch-to-docker.bat
+        ```
+        This script automatically updates your `.env` file with Docker database credentials:
+        - `DB_HOST=db`
+        - `DB_USER=zoo_user`
+        - `DB_PASS=zoo_password`
+      </Step>
 
-### Step 3: Go live
+      <Step title="Build and start containers">
+        ```bash
+        docker-compose up -d --build
+        ```
+        This command will:
+        - Build the PHP/Apache container
+        - Start MariaDB 11.4 database
+        - Initialize the database with seed data
+        - Compile assets automatically
+      </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+      <Step title="Verify the installation">
+        Check that all containers are running:
+        ```bash
+        docker-compose ps
+        ```
 
-## Next steps
+        View logs if needed:
+        ```bash
+        docker-compose logs -f web
+        ```
+      </Step>
 
-Now that you have your docs running, explore these key features:
+      <Step title="Access the application">
+        Open your browser and navigate to:
+        ```
+        http://localhost:8080
+        ```
+      </Step>
+    </Steps>
 
-<CardGroup cols={2}>
+    ### Docker Management Commands
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    <CodeGroup>
+      ```bash Stop containers
+      docker-compose down
+      ```
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+      ```bash Rebuild after code changes
+      docker-compose up -d --build
+      ```
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+      ```bash Reset database (WARNING: deletes all data)
+      docker-compose down -v && docker-compose up -d
+      ```
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+      ```bash Apply specific SQL file
+      docker exec -i zoo-arcadia-db mariadb -uzoo_user -pzoo_password zoo_arcadia < database/03_constraints.sql
+      ```
+    </CodeGroup>
 
-</CardGroup>
+  </Tab>
+
+  <Tab title="Local Setup">
+    Set up Zoo Arcadia directly on your local machine without Docker.
+
+    <Steps>
+      <Step title="Clone the repository">
+        ```bash
+        git clone https://github.com/dumitrusf/zoo-Arcadia.git
+        cd zoo-ARCADIA
+        ```
+      </Step>
+
+      <Step title="Install dependencies">
+        Install PHP dependencies:
+        ```bash
+        composer install
+        ```
+
+        Install Node.js dependencies:
+        ```bash
+        npm install
+        ```
+      </Step>
+
+      <Step title="Switch to local configuration">
+        ```bash
+        .\switch-to-local.bat
+        ```
+        This updates your `.env` file with local database settings:
+        - `DB_HOST=localhost`
+        - `DB_USER=root`
+        - `DB_PASS=root`
+        - `DB_NAME=zoo_arcadia`
+      </Step>
+
+      <Step title="Deploy the database">
+        ```bash
+        .\deploy_database.bat
+        ```
+        <Warning>
+          This command recreates the database from scratch, removing any existing data.
+        </Warning>
+      </Step>
+
+      <Step title="Compile assets">
+        Build CSS and JavaScript files:
+        ```bash
+        npx gulp buildCss && npx gulp buildJs
+        ```
+      </Step>
+
+      <Step title="Start the development server">
+        ```bash
+        php -S localhost:3001 -t public public/index.php
+        ```
+      </Step>
+
+      <Step title="Access the application">
+        Open your browser and navigate to:
+        ```
+        http://localhost:3001
+        ```
+      </Step>
+    </Steps>
+
+  </Tab>
+</Tabs>
+
+## Database Configuration
+
+Zoo Arcadia uses environment variables for database configuration. The `.env` file is automatically managed by the switch scripts.
+
+<CodeGroup>
+  ```ini Docker Configuration
+  DB_HOST=db
+  DB_NAME=zoo_arcadia
+  DB_USER=zoo_user
+  DB_PASS=zoo_password
+  ```
+
+  ```ini Local Configuration
+  DB_HOST=localhost
+  DB_NAME=zoo_arcadia
+  DB_USER=root
+  DB_PASS=root
+  ```
+</CodeGroup>
+
+## Default Credentials
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Default user credentials are created during database seeding. Check the `database/06_seed_data.sql` file for the complete list of seeded users and their roles (Admin, Veterinary, Employee, Accountant).
 </Note>
+
+The application includes the following role types:
+- **Admin** - Full system access
+- **Veterinary** - Animal health and reports management
+- **Employee** - Limited actions (maintenance, feeding)
+- **Accountant** - Financial management
+
+## Asset Compilation
+
+Zoo Arcadia uses Gulp to compile SCSS and JavaScript files.
+
+<CodeGroup>
+  ```bash Production Build
+  npx gulp buildCss && npx gulp buildJs
+  ```
+
+  ```bash Development with Watch
+  npx gulp
+  ```
+</CodeGroup>
+
+The development mode includes:
+- File watching for automatic recompilation
+- BrowserSync for live reload
+- Source maps for debugging
+
+## Next Steps
+
+Now that you have Zoo Arcadia running:
+
+1. Explore the front-end pages (animals, habitats, services)
+2. Access the back-office with appropriate credentials
+3. Review the [Installation Guide](/installation) for detailed configuration options
+4. Check the project structure in `README.md`
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    If port 8080 (Docker) or 3001 (local) is already in use, you can:
+    
+    - Stop the conflicting service
+    - Change the port in `docker-compose.yml` (Docker) or use a different port with `php -S localhost:PORT`
+  </Accordion>
+
+  <Accordion title="Composer SSL certificate error (Windows)">
+    See the [Installation Guide](/installation#ssl-certificate-error) for detailed troubleshooting steps.
+  </Accordion>
+
+  <Accordion title="Database connection failed">
+    Verify your `.env` file settings match your environment:
+    - For Docker: ensure containers are running with `docker-compose ps`
+    - For Local: ensure MySQL/MariaDB service is running
+  </Accordion>
+</AccordionGroup>

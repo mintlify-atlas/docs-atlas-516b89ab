@@ -1,0 +1,467 @@
+---
+title: 'Feeding Logs'
+description: 'Recording and tracking animal feeding with nutrition plan compliance'
+---
+
+## Overview
+
+The feeding log system allows employees to record when and how animals are fed, track compliance with nutrition plans, and monitor feeding patterns over time. All feeding operations require the `animal_feeding-assign` permission.
+
+## Creating Feeding Logs
+
+Only users with the `animal_feeding-assign` permission can create feeding logs:
+
+<Steps>
+  <Step title="Check permissions">
+    ```php
+    public function create()
+    {
+        if (!hasPermission('animal_feeding-assign')) {
+            header('Location: /animals/feeding/start?msg=error');
+            exit;
+        }
+        
+        $animalModel = new AnimalFull();
+        $animals = $animalModel->getAll();
+        $userId = $_SESSION['user']['id_user'] ?? null;
+        
+        include_once __DIR__ . '/../views/feeding/create.php';
+    }
+    ```
+  </Step>
+  
+  <Step title="Verify CSRF token">
+    ```php
+    if (!csrf_verify('feeding_save')) {
+        header('Location: /animals/feeding/create?msg=error');
+        exit;
+    }
+    ```
+  </Step>
+  
+  <Step title="Validate food type">
+    The system validates against 4 allowed food types:
+    
+    ```php
+    $allowedFoodTypes = ['meat', 'fruit', 'legumes', 'insect'];
+    
+    if (!in_array($foodType, $allowedFoodTypes)) {
+        header('Location: /animals/feeding/create?msg=error&error=Invalid food type');
+        exit;
+    }
+    ```
+  </Step>
+  
+  <Step title="Validate quantity">
+    ```php
+    $foodQty = (int)$foodQty;
+    if ($foodQty <= 0) {
+        header('Location: /animals/feeding/create?msg=error&error=Quantity must be greater than 0');
+        exit;
+    }
+    ```
+  </Step>
+  
+  <Step title="Validate user session">
+    ```php
+    if ($userId === null) {
+        error_log("Error: user_id is null when creating feeding log");
+        header('Location: /animals/feeding/create?msg=error&error=User session error');
+        exit;
+    }
+    ```
+  </Step>
+  
+  <Step title="Save the feeding log">
+    ```php
+    $feedingModel = new FeedingLog();
+    $result = $feedingModel->create(
+        $animalFullId,
+        $foodType,
+        $foodQty,
+        $userId,
+        $foodDate
+    );
+    
+    if ($result) {
+        header('Location: /animals/feeding/start?msg=saved');
+    } else {
+        header('Location: /animals/feeding/create?msg=error');
+    }
+    exit;
+    ```
+  </Step>
+</Steps>
+
+## Food Types
+
+The system supports four nutrition types:
+
+<CardGroup cols={2}>
+  <Card title="Meat" icon="drumstick-bite">
+    For carnivores and omnivores
+  </Card>
+  <Card title="Fruit" icon="apple-whole">
+    For herbivores and omnivores
+  </Card>
+  <Card title="Legumes" icon="seedling">
+    For herbivores (beans, vegetables)
+  </Card>
+  <Card title="Insect" icon="bug">
+    For insectivores and some omnivores
+  </Card>
+</CardGroup>
+
+## Feeding Log Fields
+
+<ParamField path="animal_f_id" type="integer" required>
+  The ID of the animal from `animal_full` table
+</ParamField>
+
+<ParamField path="food_type" type="enum" required>
+  Type of food: `meat`, `fruit`, `legumes`, or `insect`
+</ParamField>
+
+<ParamField path="food_qtty" type="integer" required>
+  Quantity of food in grams (must be positive)
+</ParamField>
+
+<ParamField path="user_id" type="integer" required>
+  ID of the employee who fed the animal (from session)
+</ParamField>
+
+<ParamField path="food_date" type="datetime">
+  Date and time of feeding (defaults to NOW if not provided)
+</ParamField>
+
+## Viewing Feeding Logs
+
+### All Feeding Logs
+
+View all feeding logs with nutrition plan comparison:
+
+```php
+public function start()
+{
+    $feedingModel = new FeedingLog();
+    $animalModel = new AnimalFull();
+    
+    $feedings = $feedingModel->getAll();
+    $animals = $animalModel->getAll();
+    
+    include_once __DIR__ . '/../views/feeding/start.php';
+}
+```
+
+The query joins with nutrition plans to show planned vs. actual:
+
+```php
+public function getAll() {
+    $sql = "SELECT fl.*, 
+                   ag.animal_name, 
+                   af.nutrition_id,
+                   n.food_type AS plan_food_type, 
+                   n.food_qtty AS plan_food_qtty,
+                   n.nutrition_type,
+                   u.username AS fed_by_username
+            FROM feeding_logs fl
+            JOIN animal_full af ON fl.animal_f_id = af.id_full_animal
+            JOIN animal_general ag ON af.animal_g_id = ag.id_animal_g
+            LEFT JOIN nutrition n ON af.nutrition_id = n.id_nutrition
+            LEFT JOIN users u ON fl.user_id = u.id_user
+            ORDER BY fl.food_date DESC";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_OBJ);
+}
+```
+
+### Feeding Logs for Specific Animal
+
+View feeding history for a single animal:
+
+```php
+public function view()
+{
+    $animalFullId = $_GET['animal_id'] ?? null;
+    
+    if (!$animalFullId) {
+        header('Location: /animals/feeding/start?msg=error');
+        exit;
+    }
+
+    $feedingModel = new FeedingLog();
+    $animalModel = new AnimalFull();
+    
+    $feedings = $feedingModel->getByAnimalId($animalFullId);
+    $animal = $animalModel->getById($animalFullId);
+    $lastFeeding = $feedingModel->getLastFeeding($animalFullId);
+
+    include_once __DIR__ . '/../views/feeding/view.php';
+}
+```
+
+## Nutrition Plan Compliance
+
+The system compares actual feeding to the animal's nutrition plan:
+
+### Comparison Data
+
+Each feeding log record includes:
+
+<ParamField path="food_type" type="enum">
+  What was actually fed
+</ParamField>
+
+<ParamField path="food_qtty" type="integer">
+  How much was actually fed (grams)
+</ParamField>
+
+<ParamField path="plan_food_type" type="enum">
+  What the nutrition plan recommends
+</ParamField>
+
+<ParamField path="plan_food_qtty" type="integer">
+  How much the nutrition plan recommends (grams)
+</ParamField>
+
+<ParamField path="nutrition_type" type="string">
+  The nutrition plan name (e.g., "Carnivore", "Herbivore")
+</ParamField>
+
+### Identifying Discrepancies
+
+Compare actual vs. planned to identify issues:
+
+```php
+// In the view
+foreach ($feedings as $feeding) {
+    $typeMatch = ($feeding->food_type === $feeding->plan_food_type);
+    $qtyMatch = ($feeding->food_qtty === $feeding->plan_food_qtty);
+    
+    if (!$typeMatch) {
+        // Wrong food type fed
+        echo '<span class="badge badge-warning">Wrong Type</span>';
+    }
+    
+    if (!$qtyMatch) {
+        // Wrong quantity fed
+        $difference = $feeding->food_qtty - $feeding->plan_food_qtty;
+        if ($difference > 0) {
+            echo '<span class="badge badge-info">+' . $difference . 'g</span>';
+        } else {
+            echo '<span class="badge badge-warning">' . $difference . 'g</span>';
+        }
+    }
+}
+```
+
+<Info>
+  Tracking compliance helps veterinarians identify if feeding issues are contributing to health problems.
+</Info>
+
+## Employee Feeding Management
+
+Each feeding log records which employee fed the animal:
+
+### Tracking Who Fed Animals
+
+```php
+// User ID is automatically captured from session
+$userId = $_SESSION['user']['id_user'] ?? null;
+
+// Saved in feeding log
+$feedingModel->create($animalFullId, $foodType, $foodQty, $userId, $foodDate);
+```
+
+### Viewing Feeding History by Employee
+
+Admins can see who fed which animals:
+
+```sql
+SELECT fl.*, 
+       ag.animal_name,
+       u.username AS fed_by_username
+FROM feeding_logs fl
+JOIN animal_full af ON fl.animal_f_id = af.id_full_animal
+JOIN animal_general ag ON af.animal_g_id = ag.id_animal_g
+LEFT JOIN users u ON fl.user_id = u.id_user
+WHERE fl.user_id = :employee_id
+ORDER BY fl.food_date DESC
+```
+
+This helps with:
+- Accountability tracking
+- Performance reviews
+- Identifying training needs
+- Workload distribution analysis
+
+## Deleting Feeding Logs
+
+Deleting requires either `animal_feeding-delete` or `animal_feeding-assign` permission:
+
+```php
+public function delete()
+{
+    // Check permissions
+    if (!hasPermission('animal_feeding-delete') && 
+        !hasPermission('animal_feeding-assign')) {
+        header('Location: /animals/feeding/start?msg=error');
+        exit;
+    }
+
+    $id = $_GET['id'] ?? null;
+    $animalId = $_GET['animal_id'] ?? null;
+    
+    if (!$id) {
+        header('Location: /animals/feeding/start?msg=error');
+        exit;
+    }
+
+    $feedingModel = new FeedingLog();
+    $result = $feedingModel->delete($id);
+
+    // Redirect back to animal view or start page
+    if ($result) {
+        if ($animalId) {
+            header('Location: /animals/feeding/view?animal_id=' . $animalId . '&msg=deleted');
+        } else {
+            header('Location: /animals/feeding/start?msg=deleted');
+        }
+    }
+    exit;
+}
+```
+
+<Warning>
+  Deleting feeding logs removes historical data. Consider if you really need to delete or if marking as "corrected" would be better for audit trails.
+</Warning>
+
+## Last Feeding Information
+
+Get the most recent feeding for an animal:
+
+```php
+public function getLastFeeding($animalFullId) {
+    $sql = "SELECT fl.*, 
+                   ag.animal_name, 
+                   af.nutrition_id,
+                   n.food_type AS plan_food_type, 
+                   n.food_qtty AS plan_food_qtty,
+                   n.nutrition_type,
+                   u.username AS fed_by_username
+            FROM feeding_logs fl
+            JOIN animal_full af ON fl.animal_f_id = af.id_full_animal
+            JOIN animal_general ag ON af.animal_g_id = ag.id_animal_g
+            LEFT JOIN nutrition n ON af.nutrition_id = n.id_nutrition
+            LEFT JOIN users u ON fl.user_id = u.id_user
+            WHERE fl.animal_f_id = :animal_id
+            ORDER BY fl.food_date DESC
+            LIMIT 1";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':animal_id' => $animalFullId]);
+    return $stmt->fetch(PDO::FETCH_OBJ);
+}
+```
+
+This is useful for:
+- Checking when an animal was last fed
+- Ensuring animals aren't overfed or underfed
+- Alerting if too much time has passed since last feeding
+
+## Custom Feeding Dates
+
+The system allows setting a custom date/time when creating logs:
+
+```php
+public function create($animalFullId, $foodType, $foodQty, $userId = null, $foodDate = null) {
+    try {
+        if ($foodDate) {
+            // Use custom date
+            $sql = "INSERT INTO feeding_logs (animal_f_id, user_id, food_type, food_qtty, food_date) 
+                    VALUES (:animal_id, :user_id, :food_type, :food_qtty, :food_date)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':animal_id' => $animalFullId,
+                ':user_id' => $userId,
+                ':food_type' => $foodType,
+                ':food_qtty' => $foodQty,
+                ':food_date' => $foodDate
+            ]);
+        } else {
+            // Use NOW()
+            $sql = "INSERT INTO feeding_logs (animal_f_id, user_id, food_type, food_qtty) 
+                    VALUES (:animal_id, :user_id, :food_type, :food_qtty)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':animal_id' => $animalFullId,
+                ':user_id' => $userId,
+                ':food_type' => $foodType,
+                ':food_qtty' => $foodQty
+            ]);
+        }
+        return $this->db->lastInsertId();
+    } catch (PDOException $e) {
+        error_log("Error creating feeding log: " . $e->getMessage());
+        return false;
+    }
+}
+```
+
+<Note>
+  Custom dates are useful when retroactively entering feeding data or when employees forgot to log immediately after feeding.
+</Note>
+
+## Feeding Reports
+
+Generate reports to analyze feeding patterns:
+
+### By Animal
+- Total feedings per animal
+- Average quantity per feeding
+- Compliance rate with nutrition plan
+- Most recent feeding date
+
+### By Employee
+- Total feedings per employee
+- Animals fed by employee
+- Feeding accuracy rate
+
+### By Time Period
+- Daily feeding totals
+- Weekly trends
+- Monthly comparisons
+
+## Integration with Health Reports
+
+Feeding logs are related to veterinary health reports:
+
+```php
+// When viewing an animal's health report
+$report = $reportModel->getById($reportId);
+$feedings = $feedingModel->getByAnimalId($report->id_full_animal);
+
+// Veterinarians can see:
+// 1. Health state over time
+// 2. Feeding compliance during that period
+// 3. Correlation between feeding and health
+```
+
+This helps identify:
+- If feeding issues caused health problems
+- Whether health improved after correcting feeding
+- Patterns between nutrition and animal mood
+
+## Code Reference
+
+- **Feeding Controller**: `App/animals/controllers/animals_feeding_controller.php:25-210`
+- **FeedingLog Model**: `App/animals/models/feedingLog.php:15-200`
+- **Nutrition Model**: `App/animals/models/nutrition.php`
+
+<Accordion title="Related Features">
+  - [Animal Management](/features/animal-management) - Managing animals and nutrition plans
+  - [Veterinary Reports](/features/veterinary-reports) - Health state tracking
+  - [Roles & Permissions](/features/roles-permissions) - Feeding permissions
+</Accordion>

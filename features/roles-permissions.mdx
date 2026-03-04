@@ -1,0 +1,317 @@
+---
+title: 'Roles & Permissions'
+description: 'Understanding the role-based access control system in Zoo Arcadia'
+---
+
+## Overview
+
+Zoo Arcadia implements a flexible Role-Based Access Control (RBAC) system with three core roles and support for VIP (user-specific) permissions. This system controls access to all administrative features.
+
+## The Three Roles
+
+<CardGroup cols={3}>
+  <Card title="Admin" icon="user-shield">
+    Full system access including user management, role configuration, and all CRUD operations.
+  </Card>
+  
+  <Card title="Veterinary" icon="user-doctor">
+    Specialized access for animal health management, veterinary reports, and habitat suggestions.
+  </Card>
+  
+  <Card title="Employee" icon="user">
+    Basic access for day-to-day operations like feeding logs and testimonial moderation.
+  </Card>
+</CardGroup>
+
+## Role Model
+
+Roles are defined in the `roles` table and managed through the `Role` model:
+
+```php
+class Role {
+    public $id_role;
+    public $role_name;
+    public $role_description;
+    public $created_at;
+    public $updated_at;
+}
+```
+
+### Key Methods
+
+<ParamField path="Role::check()" type="array">
+  Returns all roles from the database
+</ParamField>
+
+<ParamField path="Role::find($id_role)" type="Role|null">
+  Finds a specific role by ID
+</ParamField>
+
+<ParamField path="Role::getPermissions($id_role)" type="array">
+  Returns all permissions assigned to a role
+</ParamField>
+
+<ParamField path="Role::savePermissions($permissionIds)" type="boolean">
+  Updates the permissions for a role (transactional)
+</ParamField>
+
+## Permission System
+
+### How Permissions Work
+
+Permissions are stored in three tables:
+
+1. **`permissions`**: Master list of all available permissions
+2. **`roles_permissions`**: Maps permissions to roles
+3. **`users_permissions`**: Maps VIP permissions directly to users
+
+### Loading User Permissions
+
+When a user logs in, the system loads ALL their permissions (role + VIP):
+
+```php
+// In auth_pages_controller.php:95
+$_SESSION["user"]["permissions"] = User::getAllUserPermissions($user['id_user']);
+```
+
+This method combines role-based and VIP permissions:
+
+```php
+public static function getAllUserPermissions($userId)
+{
+    $connectionDB = DB::createInstance();
+    $permissions = [];
+
+    // Get permissions from role
+    $roleQuery = "SELECT p.permission_name
+                  FROM permissions p
+                  JOIN roles_permissions rp ON p.id_permission = rp.permission_id
+                  JOIN users u ON rp.role_id = u.role_id
+                  WHERE u.id_user = ?";
+    $roleSql = $connectionDB->prepare($roleQuery);
+    $roleSql->execute([$userId]);
+    $rolePermissions = $roleSql->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Get VIP permissions (direct user permissions)
+    $vipQuery = "SELECT p.permission_name
+                 FROM permissions p
+                 JOIN users_permissions up ON p.id_permission = up.permission_id
+                 WHERE up.user_id = ?";
+    $vipSql = $connectionDB->prepare($vipQuery);
+    $vipSql->execute([$userId]);
+    $vipPermissions = $vipSql->fetchAll(PDO::FETCH_COLUMN);
+
+    // Combine and remove duplicates
+    $permissions = array_unique(array_merge($rolePermissions, $vipPermissions));
+
+    return array_values($permissions);
+}
+```
+
+## VIP Permissions
+
+VIP permissions allow granting specific permissions to individual users, overriding or extending their role permissions.
+
+### Use Cases
+
+<Accordion title="When to use VIP permissions">
+  - Temporarily granting elevated access to a user
+  - Testing new features with specific users
+  - Giving a user access to features outside their normal role
+  - Customizing access for special circumstances
+</Accordion>
+
+### Managing VIP Permissions
+
+```php
+// Get user's VIP permissions
+$user = User::find($userId);
+$vipPermissionIds = $user->getVipPermissionsIdsUserHasAssigned();
+
+// Update VIP permissions (overwrites existing)
+$newPermissionIds = [1, 5, 8]; // Array of permission IDs
+$user->overwriteVipPermissionsIdsUserHasAssigned($newPermissionIds);
+```
+
+<Info>
+  The `overwriteVipPermissionsIdsUserHasAssigned()` method uses a database transaction to safely delete old permissions and insert new ones.
+</Info>
+
+## Checking Permissions
+
+The system provides a `hasPermission()` helper function to check if the current user has a specific permission:
+
+```php
+// In a controller
+if (!hasPermission('animals-create')) {
+    header('Location: /animals/gest/start?msg=error&error=You do not have permission');
+    exit;
+}
+```
+
+### Common Permission Patterns
+
+<CodeGroup>
+```php View Permission
+// Check if user can view a resource
+if (!hasPermission('vet_reports-view')) {
+    header('Location: /home/pages/start?msg=error');
+    exit();
+}
+```
+
+```php Create vs Edit
+// Different permissions for create and edit
+if ($id) {
+    // UPDATE - requires edit permission
+    if (!hasPermission('animals-edit')) {
+        header('Location: /animals/gest/start?msg=error');
+        exit;
+    }
+} else {
+    // CREATE - requires create permission
+    if (!hasPermission('animals-create')) {
+        header('Location: /animals/gest/start?msg=error');
+        exit;
+    }
+}
+```
+
+```php Multiple Permissions
+// Check if user has ANY of multiple permissions
+if (!hasPermission('animal_feeding-delete') && 
+    !hasPermission('animal_feeding-assign')) {
+    header('Location: /animals/feeding/start?msg=error');
+    exit;
+}
+```
+</CodeGroup>
+
+## Permission Naming Convention
+
+Permissions follow a consistent naming pattern:
+
+```
+{resource}-{action}
+```
+
+### Example Permissions
+
+<AccordionGroup>
+  <Accordion title="Animal Permissions">
+    - `animals-view`: View animals list
+    - `animals-create`: Create new animals
+    - `animals-edit`: Edit existing animals
+    - `animals-delete`: Delete animals
+    - `animal_feeding-assign`: Create feeding logs
+    - `animal_feeding-delete`: Delete feeding logs
+  </Accordion>
+  
+  <Accordion title="Veterinary Permissions">
+    - `vet_reports-view`: View health reports
+    - `vet_reports-create`: Create health reports
+    - `vet_reports-edit`: Edit health reports
+  </Accordion>
+  
+  <Accordion title="Habitat Permissions">
+    - `habitats-view`: View habitats
+    - `habitats-create`: Create habitats
+    - `habitats-edit`: Edit habitats
+    - `habitats-delete`: Delete habitats
+  </Accordion>
+  
+  <Accordion title="User Management">
+    - `users-view`: View users
+    - `users-create`: Create users
+    - `users-edit`: Edit users
+    - `users-delete`: Delete users
+  </Accordion>
+</AccordionGroup>
+
+## Role-Specific Access
+
+Some features check the role name directly instead of permissions:
+
+```php
+// Checking role name
+$roleName = $_SESSION['user']['role_name'] ?? '';
+
+if ($roleName !== 'Admin') {
+    header('Location: /home/pages/start?msg=error');
+    exit;
+}
+```
+
+<Warning>
+  While role-name checks are used in some places (like habitat suggestions), the preferred approach is to use permission-based checks for better flexibility.
+</Warning>
+
+## Managing Role Permissions
+
+Admins can manage role permissions through the back office:
+
+<Steps>
+  <Step title="Load existing permissions">
+    ```php
+    $role = Role::find($roleId);
+    $assignedPermissions = $role->getPermissionIds();
+    ```
+  </Step>
+  
+  <Step title="Display permission checkboxes">
+    Show all available permissions with checkboxes, marking the assigned ones as checked.
+  </Step>
+  
+  <Step title="Save updated permissions">
+    ```php
+    $selectedPermissions = $_POST['permissions'] ?? [];
+    $role->savePermissions($selectedPermissions);
+    ```
+  </Step>
+</Steps>
+
+### Transaction Safety
+
+The `savePermissions()` method uses transactions to ensure data integrity:
+
+```php
+public function savePermissions(array $permissionIds)
+{
+    $connectionDB = DB::createInstance();
+    $connectionDB->beginTransaction();
+
+    try {
+        // Delete old permissions
+        $deleteSql = $connectionDB->prepare("DELETE FROM roles_permissions WHERE role_id = ?");
+        $deleteSql->execute([$this->id_role]);
+
+        // Insert new permissions
+        if (!empty($permissionIds)) {
+            $insertSql = $connectionDB->prepare(
+                "INSERT INTO roles_permissions (role_id, permission_id) VALUES (?, ?)"
+            );
+            foreach ($permissionIds as $permissionId) {
+                $insertSql->execute([$this->id_role, $permissionId]);
+            }
+        }
+
+        $connectionDB->commit();
+        return true;
+    } catch (Exception $e) {
+        $connectionDB->rollBack();
+        error_log($e->getMessage());
+        return false;
+    }
+}
+```
+
+## Code Reference
+
+- **User Model**: `App/users/models/user.php:376-409` (permission loading)
+- **Role Model**: `App/roles/models/role.php:20-265` (role management)
+- **VIP Permissions**: `App/users/models/user.php:309-373` (VIP management)
+- **Permission Check**: `includes/functions.php` (hasPermission helper)
+
+<Note>
+  Remember to reload user permissions after updating role or VIP permissions. Users need to log out and back in to see permission changes take effect.
+</Note>

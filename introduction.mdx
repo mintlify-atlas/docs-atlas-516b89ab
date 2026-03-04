@@ -1,0 +1,193 @@
+---
+title: Introduction
+description: Welcome to Zoo Arcadia - A comprehensive zoo management system with role-based access control
+---
+
+<div className="relative overflow-hidden bg-gradient-to-br from-[#2d5016] via-[#3a6b1c] to-[#1a3009] dark:from-[#1a3009] dark:via-[#2d5016] dark:to-[#0f1a05] py-20 px-6 rounded-2xl mb-16">
+  <div className="max-w-5xl mx-auto relative z-10">
+    <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6">
+      Zoo Arcadia Documentation
+    </h1>
+    <p className="text-lg sm:text-xl text-white/90 max-w-2xl mb-8">
+      Complete documentation for managing your zoo operations with role-based access control, animal health tracking, and visitor engagement features.
+    </p>
+    <div className="flex flex-wrap gap-4">
+      <a 
+        href="/quickstart" 
+        className="inline-flex items-center px-6 py-3 bg-white text-[#2d5016] font-semibold rounded-lg hover:bg-gray-100 transition-colors no-underline"
+      >
+        Get Started
+      </a>
+      <a 
+        href="/api/overview" 
+        className="inline-flex items-center px-6 py-3 border border-white/30 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors no-underline"
+      >
+        Explore API
+      </a>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    What is Zoo Arcadia?
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Zoo Arcadia is a full-stack zoo management application built with PHP and a screaming architecture pattern. It provides comprehensive tools for managing animals, habitats, veterinary reports, feeding schedules, and visitor interactions.
+  </p>
+
+  <CardGroup cols={3}>
+    <Card title="Animal Management" icon="paw" href="/features/animal-management">
+      Track animals, species, health records, and feeding logs
+    </Card>
+    <Card title="Role-Based Access" icon="user-shield" href="/features/roles-permissions">
+      Secure access control for admins, vets, and employees
+    </Card>
+    <Card title="Veterinary Reports" icon="stethoscope" href="/features/veterinary-reports">
+      Health monitoring and nutrition tracking
+    </Card>
+    <Card title="Habitat Management" icon="tree" href="/features/habitat-management">
+      Manage habitats with visitor suggestions
+    </Card>
+    <Card title="Public API" icon="code" href="/api/overview">
+      RESTful API for animals, habitats, and services
+    </Card>
+    <Card title="Docker Ready" icon="docker" href="/development/docker-deployment">
+      Easy deployment with Docker Compose
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Quick Start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get Zoo Arcadia running in minutes with Docker or set up a local development environment.
+  </p>
+
+  <Steps>
+    <Step title="Clone the repository">
+      Download the Zoo Arcadia source code from GitHub.
+      
+      ```bash
+      git clone https://github.com/dumitrusf/zoo-Arcadia.git
+      cd zoo-Arcadia
+      ```
+    </Step>
+    
+    <Step title="Choose your environment">
+      You can run Zoo Arcadia with Docker (recommended) or locally with PHP and MySQL.
+      
+      <Tabs>
+        <Tab title="Docker">
+          ```bash
+          .\switch-to-docker.bat
+          docker-compose up -d --build
+          ```
+          Access the application at `http://localhost:8080`
+        </Tab>
+        <Tab title="Local">
+          ```bash
+          composer install
+          npm install
+          .\switch-to-local.bat
+          .\deploy_database.bat
+          npx gulp buildCss && npx gulp buildJs
+          php -S localhost:3001 -t public public/index.php
+          ```
+          Access the application at `http://localhost:3001`
+        </Tab>
+      </Tabs>
+    </Step>
+    
+    <Step title="Log in with default credentials">
+      Use the default admin account to access the back-office dashboard.
+      
+      <Note>
+        Default credentials are created during database setup. Check the seed data for initial user accounts.
+      </Note>
+    </Step>
+    
+    <Step title="Explore the features">
+      Navigate to the dashboard at `/home/pages/start` to manage animals, habitats, users, and more.
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    User Roles
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Zoo Arcadia supports three distinct user roles, each with specific permissions and responsibilities.
+  </p>
+
+  <CardGroup cols={3}>
+    <Card title="Administrator" icon="crown" href="/guides/admin-guide">
+      Full system access - manage users, roles, animals, habitats, and all content
+    </Card>
+    <Card title="Veterinarian" icon="user-doctor" href="/guides/veterinary-guide">
+      Health monitoring - create reports, track nutrition, and update animal health states
+    </Card>
+    <Card title="Employee" icon="user" href="/guides/employee-guide">
+      Daily operations - manage feeding logs, moderate testimonials, and update services
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Architecture Highlights
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Built with a screaming architecture pattern that organizes code by domain, not technical layer.
+  </p>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-6 rounded-lg border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Domain-Driven Structure</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Each feature (animals, habitats, users) is a self-contained domain with its own MVC structure, controllers, models, and views.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-lg border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Front Controller Pattern</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Single entry point (`public/index.php`) handles all requests and routes them through a central router with session and permission checks.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-lg border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Security First</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        CSRF protection, session timeout (11 hours), secure cookie settings, and role-based permission validation on every request.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-lg border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Modern Asset Pipeline</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Gulp-based build system compiles SCSS to CSS, bundles JavaScript, and optimizes assets for production.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="p-8 rounded-xl bg-gradient-to-r from-[#2d5016] to-[#3a6b1c] dark:from-[#1a3009] dark:to-[#2d5016]">
+    <h2 className="text-2xl font-semibold text-white mb-2">
+      Ready to get started?
+    </h2>
+    <p className="text-white/90 mb-6">
+      Follow the quickstart guide to set up Zoo Arcadia and explore all features.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-flex items-center px-6 py-3 bg-white text-[#2d5016] font-semibold rounded-lg hover:bg-gray-100 transition-colors no-underline"
+    >
+      View Quickstart Guide
+    </a>
+  </div>
+</div>

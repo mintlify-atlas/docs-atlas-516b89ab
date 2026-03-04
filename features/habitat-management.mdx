@@ -1,0 +1,456 @@
+---
+title: 'Habitat Management'
+description: 'Managing zoo habitats and veterinarian suggestions for habitat improvements'
+---
+
+## Overview
+
+The habitat management system handles both the creation and maintenance of animal habitats, as well as a suggestion system where veterinarians can propose improvements that require admin approval.
+
+## Habitat CRUD Operations
+
+### Creating a Habitat
+
+Creating a habitat requires the `habitats-create` permission:
+
+<Steps>
+  <Step title="Check permissions">
+    ```php
+    if (!hasPermission('habitats-create')) {
+        header('Location: /habitats/gest/start?msg=error');
+        exit;
+    }
+    ```
+  </Step>
+  
+  <Step title="Display creation form">
+    The form collects:
+    - Habitat name (required)
+    - Description
+    - Images (mobile, tablet, desktop)
+    - Optional Hero section for landing page
+  </Step>
+  
+  <Step title="Save habitat record">
+    ```php
+    // Verify CSRF token
+    if (!csrf_verify('habitat_save')) {
+        header('Location: /habitats/gest/create?msg=error');
+        exit;
+    }
+
+    $name = trim($_POST['habitat_name'] ?? '');
+    $description = trim($_POST['description_habitat'] ?? '');
+    
+    $habitatId = $habitatModel->create($name, $description);
+    ```
+  </Step>
+  
+  <Step title="Upload and link images">
+    ```php
+    // Upload responsive images to Cloudinary
+    $cloudinary = new Cloudinary();
+    $urlMobile = $cloudinary->upload($_FILES['image']);
+    $urlTablet = $cloudinary->upload($_FILES['image_tablet']);
+    $urlDesktop = $cloudinary->upload($_FILES['image_desktop']);
+    
+    // Create media record
+    $mediaId = $mediaModel->create(
+        $urlMobile,
+        'image',
+        "Habitat: $name",
+        $urlTablet,
+        $urlDesktop
+    );
+    
+    // Link to habitat
+    $mediaModel->link($mediaId, 'habitats', $habitatId);
+    ```
+  </Step>
+</Steps>
+
+### Updating a Habitat
+
+Updating requires the `habitats-edit` permission:
+
+```php
+public function save()
+{
+    $id = $_POST['id_habitat'] ?? null;
+    
+    if ($id) {
+        // UPDATE
+        if (!hasPermission('habitats-edit')) {
+            header('Location: /habitats/gest/start?msg=error');
+            exit;
+        }
+        
+        $habitatModel->update($id, $name, $description);
+        
+        // Handle new images
+        if ($urlMobile || $urlTablet || $urlDesktop) {
+            // Unlink old media
+            $mediaModel->unlink('habitats', $id);
+            // Link new media
+            $mediaModel->link($mediaId, 'habitats', $id);
+        }
+    }
+}
+```
+
+### Deleting a Habitat
+
+Deletion requires the `habitats-delete` permission:
+
+```php
+public function delete()
+{
+    if (!hasPermission('habitats-delete')) {
+        header('Location: /habitats/gest/start?msg=error');
+        exit;
+    }
+
+    $id = $_GET['id'] ?? null;
+    if ($id) {
+        // Delete media relation first
+        $mediaModel->unlink('habitats', $id);
+        
+        // Delete habitat
+        $habitatModel->delete($id);
+    }
+    
+    header('Location: /habitats/gest/start?msg=deleted');
+    exit;
+}
+```
+
+<Warning>
+  Deleting a habitat may affect animals assigned to that habitat. Ensure animals are reassigned before deletion or handle orphaned animals appropriately.
+</Warning>
+
+## Habitat-Animal Relationships
+
+Animals are assigned to habitats through the `animal_full` table:
+
+### Getting Animals in a Habitat
+
+```php
+// In Habitat model
+public function getAnimalsByHabitatId($habitatId)
+{
+    $sql = "SELECT af.*, 
+                   ag.animal_name, 
+                   ag.gender,
+                   s.specie_name,
+                   c.category_name,
+                   n.nutrition_type
+            FROM animal_full af
+            JOIN animal_general ag ON af.animal_g_id = ag.id_animal_g
+            LEFT JOIN specie s ON ag.specie_id = s.id_specie
+            LEFT JOIN category c ON s.category_id = c.id_category
+            LEFT JOIN nutrition n ON af.nutrition_id = n.id_nutrition
+            WHERE af.habitat_id = :habitat_id
+            ORDER BY ag.animal_name ASC";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':habitat_id' => $habitatId]);
+    return $stmt->fetchAll(PDO::FETCH_OBJ);
+}
+```
+
+### Viewing a Specific Habitat
+
+Public page at `/habitats/pages/habitat1?id=X` displays:
+
+```php
+public function habitat1() {
+    $id = $_GET['id'] ?? null;
+    
+    // Get habitat details
+    $habitat = $habitatModel->getById($id);
+    
+    // Get animals in this habitat
+    $animals = $habitatModel->getAnimalsByHabitatId($id);
+    
+    // Get latest health state for each animal
+    $healthReportModel = new HealthStateReport();
+    foreach ($animals as $animal) {
+        $latestReport = $healthReportModel->getLatestByAnimalId(
+            $animal->id_full_animal
+        );
+        $animal->latest_health_state = $latestReport->hsr_state ?? null;
+    }
+    
+    // Load view
+    include_once __DIR__ . '/../views/pages/habitat1.php';
+}
+```
+
+## Veterinarian Suggestion System
+
+Veterinarians can suggest habitat improvements, which admins can then approve or reject.
+
+### Suggestion Workflow
+
+<Steps>
+  <Step title="Veterinarian creates suggestion">
+    Only users with the **Veterinary** role can create suggestions:
+    
+    ```php
+    public function create()
+    {
+        $userRoleName = $_SESSION['user']['role_name'] ?? null;
+        if ($userRoleName !== 'Veterinary') {
+            header('Location: /habitats/suggestion/start?msg=error');
+            exit;
+        }
+        
+        // Show creation form
+        include_once __DIR__ . '/../views/suggestion/create.php';
+    }
+    ```
+  </Step>
+  
+  <Step title="Save suggestion as pending">
+    ```php
+    public function save()
+    {
+        // Verify CSRF token
+        if (!csrf_verify('habitat_suggestion_save')) {
+            header('Location: /habitats/suggestion/create?msg=error');
+            exit;
+        }
+
+        $habitatId = $_POST['habitat_id'] ?? null;
+        $details = trim($_POST['details'] ?? '');
+        $userId = $_SESSION['user']['id_user'] ?? null;
+        
+        // Create with status 'pending'
+        $suggestionModel->create($habitatId, $userId, $details);
+    }
+    ```
+  </Step>
+  
+  <Step title="Admin reviews suggestion">
+    Admins can accept or reject:
+    
+    ```php
+    public function review()
+    {
+        $userRoleName = $_SESSION['user']['role_name'] ?? null;
+        if ($userRoleName !== 'Admin') {
+            header('Location: /habitats/suggestion/start?msg=error');
+            exit;
+        }
+        
+        // Verify CSRF
+        if (!csrf_verify('habitat_suggestion_review')) {
+            header('Location: /habitats/suggestion/start?msg=error');
+            exit;
+        }
+        
+        $id = $_POST['id_hab_suggestion'] ?? null;
+        $status = $_POST['status'] ?? null; // 'accepted' or 'rejected'
+        $userId = $_SESSION['user']['id_user'] ?? null;
+        
+        $suggestionModel->review($id, $status, $userId);
+    }
+    ```
+  </Step>
+</Steps>
+
+### Suggestion Statuses
+
+<CardGroup cols={3}>
+  <Card title="Pending" icon="clock" color="#ffc107">
+    Waiting for admin review
+  </Card>
+  <Card title="Accepted" icon="check" color="#28a745">
+    Approved by admin
+  </Card>
+  <Card title="Rejected" icon="times" color="#dc3545">
+    Declined by admin
+  </Card>
+</CardGroup>
+
+### Permission Rules
+
+<Accordion title="Veterinarian Rules">
+  - Can **create** new suggestions
+  - Can **edit** their own **pending** suggestions only
+  - Can **delete** their own **accepted** or **rejected** suggestions (not pending)
+  - Cannot delete pending suggestions (must edit or wait for review)
+  - Can only see their own suggestions
+</Accordion>
+
+<Accordion title="Admin Rules">
+  - Can **review** (accept/reject) any pending suggestion
+  - Can **delete** accepted or rejected suggestions
+  - Cannot delete pending suggestions (must review first)
+  - Can see all suggestions from all veterinarians
+</Accordion>
+
+### Editing Suggestions
+
+Veterinarians can only edit **pending** suggestions that belong to them:
+
+```php
+public function edit()
+{
+    $userRoleName = $_SESSION['user']['role_name'] ?? null;
+    if ($userRoleName !== 'Veterinary') {
+        header('Location: /habitats/suggestion/start?msg=error');
+        exit;
+    }
+
+    $id = $_GET['id'] ?? null;
+    $suggestion = $suggestionModel->getById($id);
+    $userId = $_SESSION['user']['id_user'] ?? null;
+
+    // Check ownership
+    if ($suggestion->suggested_by != $userId) {
+        header('Location: /habitats/suggestion/start?msg=error&error=You can only edit your own suggestions');
+        exit;
+    }
+
+    // Check status
+    if ($suggestion->status !== 'pending') {
+        header('Location: /habitats/suggestion/start?msg=error&error=You can only edit pending suggestions');
+        exit;
+    }
+    
+    include_once __DIR__ . '/../views/suggestion/edit.php';
+}
+```
+
+### Deleting Suggestions
+
+Deletion rules vary by role:
+
+```php
+public function delete()
+{
+    $id = $_GET['id'] ?? null;
+    $userRoleName = $_SESSION['user']['role_name'] ?? null;
+    $userId = $_SESSION['user']['id_user'] ?? null;
+
+    $suggestion = $suggestionModel->getById($id);
+
+    // Veterinarians can only delete accepted/rejected (not pending)
+    if ($userRoleName === 'Veterinary') {
+        if ($suggestion->suggested_by != $userId) {
+            header('Location: /habitats/suggestion/start?msg=error&error=You can only delete your own suggestions');
+            exit;
+        }
+        if ($suggestion->status === 'pending') {
+            header('Location: /habitats/suggestion/start?msg=error&error=You cannot delete pending suggestions. Edit or wait for review.');
+            exit;
+        }
+    }
+    
+    // Admins can only delete accepted/rejected (not pending - must review first)
+    if ($userRoleName === 'Admin') {
+        if ($suggestion->status === 'pending') {
+            header('Location: /habitats/suggestion/start?msg=error&error=You cannot delete pending suggestions. Please accept or reject them first.');
+            exit;
+        }
+    }
+
+    $result = $suggestionModel->delete($id, $userRoleName);
+}
+```
+
+<Info>
+  The system prevents deletion of pending suggestions to ensure all suggestions go through the review process before being removed from the system.
+</Info>
+
+### Viewing Suggestions
+
+The dashboard shows different views based on role:
+
+```php
+public function start()
+{
+    $userRoleName = $_SESSION['user']['role_name'] ?? null;
+    $userId = $_SESSION['user']['id_user'] ?? null;
+    
+    // Veterinarians see only their suggestions
+    if ($userRoleName === 'Veterinary') {
+        $suggestions = $suggestionModel->getByVeterinarian($userId);
+    } else {
+        // Admins see all suggestions
+        $suggestions = $suggestionModel->getAll();
+    }
+    
+    include_once __DIR__ . '/../views/suggestion/start.php';
+}
+```
+
+## Public Habitat Pages
+
+Visitors can view habitats through public pages:
+
+### All Habitats Page
+
+`/habitats/pages/habitats` displays a grid of all habitats with images and descriptions.
+
+### Individual Habitat Page
+
+`/habitats/pages/habitat1?id=X` displays:
+- Habitat details (name, description)
+- All animals living in the habitat
+- Health status of each animal
+- Filters for species, nutrition type, and health state
+
+## Hero Sections for Habitats
+
+Each habitat can have a custom Hero section for its landing page:
+
+```php
+// Handle Hero creation/update (optional)
+$heroTitle = trim($_POST['hero_title'] ?? '');
+$heroSubtitle = trim($_POST['hero_subtitle'] ?? '');
+
+if (!empty($heroTitle)) {
+    $heroModel = new Hero();
+    $existingHero = $heroModel->getByHabitatId($habitatId);
+    
+    if ($existingHero) {
+        // Update existing hero
+        $heroModel->update(
+            $existingHero->id_hero,
+            $heroTitle,
+            $heroSubtitle,
+            'habitats',
+            false,
+            $habitatId
+        );
+    } else {
+        // Create new hero
+        $heroModel->create(
+            $heroTitle,
+            $heroSubtitle,
+            'habitats',
+            false,
+            $habitatId
+        );
+    }
+}
+```
+
+<Note>
+  Hero sections are optional and can include custom images and text to create an engaging landing page for each habitat.
+</Note>
+
+## Code Reference
+
+- **Habitat Controller**: `App/habitats/controllers/habitats_gest_controller.php:27-285`
+- **Habitat Model**: `App/habitats/models/habitat.php`
+- **Suggestion Controller**: `App/habitats/controllers/habitats_suggestion_controller.php:22-331`
+- **Suggestion Model**: `App/habitats/models/habitatSuggestion.php`
+- **Public Pages**: `App/habitats/controllers/habitats_pages_controller.php:30-138`
+
+<Accordion title="Related Features">
+  - [Animal Management](/features/animal-management) - Managing animals in habitats
+  - [Roles & Permissions](/features/roles-permissions) - Understanding veterinarian and admin roles
+</Accordion>

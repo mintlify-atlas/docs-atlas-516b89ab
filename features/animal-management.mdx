@@ -1,0 +1,465 @@
+---
+title: 'Animal Management'
+description: 'Complete guide to managing animals, species, categories, and nutrition plans'
+---
+
+## Overview
+
+The animal management system handles all aspects of the zoo's animal collection, from basic information to nutrition plans and click tracking. The system uses a two-table structure for animals:
+
+- **`animal_general`**: Basic identity (name, species, gender)
+- **`animal_full`**: Complete profile (habitat, nutrition, images)
+
+## CRUD Operations
+
+### Creating an Animal
+
+Creating an animal requires the `animals-create` permission and follows a multi-step process:
+
+<Steps>
+  <Step title="Display the form">
+    ```php
+    public function create()
+    {
+        if (!hasPermission('animals-create')) {
+            header('Location: /animals/gest/start?msg=error');
+            exit;
+        }
+        
+        // Load dropdown data
+        $categories = $categoryModel->getAll();
+        $species = $specieModel->getAll();
+        $habitats = $habitatModel->getAll();
+        $nutritions = $nutritionModel->getAll();
+        
+        include_once __DIR__ . '/../views/gest/edit.php';
+    }
+    ```
+  </Step>
+  
+  <Step title="Create animal_general record">
+    ```php
+    $animalGeneralId = $animalGeneralModel->create(
+        $animalName,
+        $specieId,
+        $gender
+    );
+    ```
+  </Step>
+  
+  <Step title="Create animal_full record">
+    ```php
+    $animalFullId = $animalFullModel->create(
+        $animalGeneralId,
+        $habitatId,
+        $nutritionId
+    );
+    ```
+  </Step>
+  
+  <Step title="Upload images to Cloudinary">
+    The system supports responsive images for mobile, tablet, and desktop:
+    
+    ```php
+    $cloudinary = new Cloudinary();
+    
+    // Upload mobile image
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        $urlMobile = $cloudinary->upload($_FILES['image']);
+    }
+    
+    // Upload tablet image
+    if (isset($_FILES['image_tablet']) && $_FILES['image_tablet']['error'] === UPLOAD_ERR_OK) {
+        $urlTablet = $cloudinary->upload($_FILES['image_tablet']);
+    }
+    
+    // Upload desktop image
+    if (isset($_FILES['image_desktop']) && $_FILES['image_desktop']['error'] === UPLOAD_ERR_OK) {
+        $urlDesktop = $cloudinary->upload($_FILES['image_desktop']);
+    }
+    ```
+  </Step>
+  
+  <Step title="Link images via media system">
+    ```php
+    if ($urlMobile || $urlTablet || $urlDesktop) {
+        $base = $urlMobile ?? $urlDesktop ?? $urlTablet;
+        
+        $mediaId = $mediaModel->create(
+            $base,
+            'image',
+            "Animal: $animalName",
+            $urlTablet,
+            $urlDesktop
+        );
+        
+        $mediaModel->link($mediaId, 'animal_full', $animalFullId);
+    }
+    ```
+  </Step>
+</Steps>
+
+### Updating an Animal
+
+Updating requires the `animals-edit` permission:
+
+```php
+public function save()
+{
+    $id = $_POST['id_full_animal'] ?? null;
+    
+    if ($id) {
+        // UPDATE MODE
+        if (!hasPermission('animals-edit')) {
+            header('Location: /animals/gest/start?msg=error');
+            exit;
+        }
+        
+        $existingAnimal = $animalFullModel->getById($id);
+        $animalGeneralId = $existingAnimal->animal_g_id;
+        
+        // Update animal_general
+        $animalGeneralModel->update(
+            $animalGeneralId,
+            $animalName,
+            $specieId,
+            $gender
+        );
+        
+        // Update animal_full
+        $animalFullModel->update($id, $habitatId, $nutritionId);
+        
+        // Handle new image uploads (unlink old media first)
+        if ($urlMobile || $urlTablet || $urlDesktop) {
+            $mediaModel->unlink('animal_full', $id);
+            // ... create and link new media
+        }
+    }
+}
+```
+
+### Deleting an Animal
+
+Deletion requires the `animals-delete` permission and cleans up all related data:
+
+```php
+public function delete()
+{
+    if (!hasPermission('animals-delete')) {
+        header('Location: /animals/gest/start?msg=error');
+        exit;
+    }
+
+    $id = $_GET['id'] ?? null;
+    if ($id) {
+        $animalFull = $animalFullModel->getById($id);
+        
+        // Delete media relation
+        $mediaModel->unlink('animal_full', $id);
+        
+        // Delete animal_full
+        $animalFullModel->delete($id);
+        
+        // Delete animal_general
+        $animalGeneralModel->delete($animalFull->animal_g_id);
+    }
+}
+```
+
+<Warning>
+  Deleting an animal removes all associated data including health reports, feeding logs, and click statistics. This action cannot be undone.
+</Warning>
+
+## Species & Categories
+
+Animals are organized into categories and species:
+
+### Category Structure
+
+```php
+class Category {
+    public $id_category;
+    public $category_name;
+}
+```
+
+Examples: Mammals, Birds, Reptiles, Fish, Amphibians
+
+### Species Management
+
+Species belong to categories:
+
+```php
+// Create a species
+public function saveSpecies()
+{
+    $categoryId = $_POST['category_id'] ?? null;
+    $name = trim($_POST['specie_name'] ?? '');
+    
+    if ($id) {
+        // UPDATE
+        if (!hasPermission('animals-edit')) {
+            header('Location: /animals/gest/start?msg=error');
+            exit;
+        }
+        $specieModel->update($id, $categoryId, $name);
+    } else {
+        // CREATE
+        if (!hasPermission('animals-create')) {
+            header('Location: /animals/gest/start?msg=error');
+            exit;
+        }
+        $specieModel->create($categoryId, $name);
+    }
+}
+```
+
+<Info>
+  Species must be assigned to a category. The category determines the broad classification, while species provides specific identification.
+</Info>
+
+## Nutrition Plans
+
+Nutrition plans define feeding requirements for animals:
+
+### Nutrition Fields
+
+<ParamField path="nutrition_type" type="string">
+  Type of nutrition plan (e.g., "Carnivore", "Herbivore", "Omnivore")
+</ParamField>
+
+<ParamField path="food_type" type="enum">
+  Type of food: `meat`, `fruit`, `legumes`, or `insect`
+</ParamField>
+
+<ParamField path="food_qtty" type="integer">
+  Recommended quantity in grams
+</ParamField>
+
+### Managing Nutrition Plans
+
+```php
+public function saveNutrition()
+{
+    // Verify CSRF token
+    if (!csrf_verify('animal_save_nutrition')) {
+        header('Location: /animals/gest/start?msg=error');
+        exit;
+    }
+
+    $id = $_POST['id_nutrition'] ?? null;
+    
+    // Check permissions
+    if ($id) {
+        if (!hasPermission('animals-edit')) {
+            header('Location: /animals/gest/start?msg=error');
+            exit;
+        }
+    } else {
+        if (!hasPermission('animals-create')) {
+            header('Location: /animals/gest/start?msg=error');
+            exit;
+        }
+    }
+    
+    $nutritionType = $_POST['nutrition_type'] ?? '';
+    $foodType = $_POST['food_type'] ?? '';
+    $foodQty = $_POST['food_qtty'] ?? null;
+    
+    if ($id) {
+        $nutritionModel->update($id, $nutritionType, $foodType, (int)$foodQty);
+    } else {
+        $nutritionModel->create($nutritionType, $foodType, (int)$foodQty);
+    }
+}
+```
+
+## Click Tracking
+
+The system tracks which animals are most popular with visitors using the `animal_clicks` table:
+
+### How Click Tracking Works
+
+<Steps>
+  <Step title="Visitor views animal page">
+    When a visitor navigates to `/animals/pages/animalpicked?id=X`, the system registers their interest.
+  </Step>
+  
+  <Step title="Session-based deduplication">
+    ```php
+    // Initialize session array for tracking
+    if (!isset($_SESSION['animal_clicks'])) {
+        $_SESSION['animal_clicks'] = [];
+    }
+    
+    // Check if already clicked in this session
+    $animal_g_id = $animal->animal_g_id;
+    if (!in_array($animal_g_id, $_SESSION['animal_clicks'])) {
+        // Register the click
+        $clickModel = new AnimalClick();
+        $clickModel->registerClick($animal_g_id);
+        
+        // Mark as clicked
+        $_SESSION['animal_clicks'][] = $animal_g_id;
+    }
+    ```
+  </Step>
+  
+  <Step title="Monthly aggregation">
+    Clicks are aggregated by month and year:
+    
+    ```php
+    public function registerClick($animal_g_id)
+    {
+        $year = (int)date('Y');
+        $month = (int)date('n');
+
+        $sql = "INSERT INTO animal_clicks (animal_g_id, year, month, click_count) 
+                VALUES (:animal_id, :year, :month, 1)
+                ON DUPLICATE KEY UPDATE 
+                click_count = click_count + 1,
+                updated_at = CURRENT_TIMESTAMP";
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':animal_id' => $animal_g_id,
+            ':year' => $year,
+            ':month' => $month
+        ]);
+    }
+    ```
+  </Step>
+</Steps>
+
+### Viewing Click Statistics
+
+```php
+// Get top 10 most popular animals (all time)
+$topAnimals = $clickModel->getTopAnimals(10);
+
+// Get current month statistics
+$monthStats = $clickModel->getCurrentMonthStats();
+
+// Get last 6 months statistics
+$recentStats = $clickModel->getLastMonthsStats(6);
+
+// Get total clicks across all animals
+$totalClicks = $clickModel->getTotalClicks();
+```
+
+<Note>
+  Click tracking uses `ON DUPLICATE KEY UPDATE` to efficiently aggregate clicks by month without creating duplicate records.
+</Note>
+
+## Image Management with Cloudinary
+
+Zoo Arcadia uses Cloudinary for image hosting and management:
+
+### Responsive Images
+
+The system supports three responsive breakpoints:
+
+<CardGroup cols={3}>
+  <Card title="Mobile" icon="mobile">
+    Base image for mobile devices
+  </Card>
+  <Card title="Tablet" icon="tablet">
+    Medium-sized image for tablets
+  </Card>
+  <Card title="Desktop" icon="desktop">
+    Full-resolution image for desktop
+  </Card>
+</CardGroup>
+
+### Upload Process
+
+```php
+$cloudinary = new Cloudinary();
+
+// Upload returns Cloudinary URL
+$url = $cloudinary->upload($_FILES['image']);
+
+// Example URL: https://res.cloudinary.com/dzx.../v123.../animal.jpg
+```
+
+### Media Linking
+
+Images are linked to animals through the media system:
+
+```php
+// Create media record
+$mediaId = $mediaModel->create(
+    $urlBase,           // Mobile/base URL
+    'image',            // Media type
+    "Animal: Lion",    // Description
+    $urlTablet,         // Tablet URL (optional)
+    $urlDesktop         // Desktop URL (optional)
+);
+
+// Link to animal
+$mediaModel->link($mediaId, 'animal_full', $animalFullId);
+
+// Unlink when updating
+$mediaModel->unlink('animal_full', $animalFullId);
+```
+
+## Public Animal Pages
+
+Visitors can browse animals through public pages:
+
+### All Animals Page
+
+`/animals/pages/allanimals` displays:
+- All animals with images
+- Filter by species, habitat, nutrition type
+- Filter by health state
+- Latest health status for each animal
+
+```php
+public function allanimals() {
+    // Get all animals
+    $animals = $animalModel->getAll();
+    
+    // Get latest health state for each
+    $healthReportModel = new HealthStateReport();
+    foreach ($animals as $animal) {
+        $latestReport = $healthReportModel->getLatestByAnimalId(
+            $animal->id_full_animal
+        );
+        $animal->latest_health_state = $latestReport 
+            ? $latestReport->hsr_state 
+            : null;
+    }
+    
+    // Get filter options
+    $species = $specieModel->getAll();
+    $habitats = $habitatModel->getAll();
+    $nutritions = $nutritionModel->getAll();
+    
+    // Load view
+    include_once __DIR__ . '/../views/pages/allanimals.php';
+}
+```
+
+### Individual Animal Page
+
+`/animals/pages/animalpicked?id=X` displays:
+- Complete animal profile
+- Images and description
+- Current health status
+- Habitat information
+- Species and category
+
+## Code Reference
+
+- **Animal Controller**: `App/animals/controllers/animals_gest_controller.php:38-525`
+- **Animal General Model**: `App/animals/models/animalGeneral.php:15-126`
+- **Animal Full Model**: `App/animals/models/animalFull.php`
+- **Click Tracking**: `App/animals/models/animalClick.php:15-183`
+- **Public Pages**: `App/animals/controllers/animals_pages_controller.php:31-149`
+
+<Accordion title="Related Features">
+  - [Habitat Management](/features/habitat-management) - Managing animal habitats
+  - [Veterinary Reports](/features/veterinary-reports) - Animal health tracking
+  - [Feeding Logs](/features/feeding-logs) - Recording animal feeding
+</Accordion>

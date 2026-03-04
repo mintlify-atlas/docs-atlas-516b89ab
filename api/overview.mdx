@@ -1,0 +1,177 @@
+---
+title: API Overview
+description: Introduction to the Zoo Arcadia REST API for accessing animal, habitat, and service data
+---
+
+# API Overview
+
+The Zoo Arcadia REST API provides programmatic access to zoo information including animals, habitats, services, schedules, and testimonials. The API follows RESTful principles and returns responses in JSON format.
+
+## Base URL
+
+All API requests are made to:
+
+```
+https://your-domain.com/api
+```
+
+The API uses a clean URL structure with the following pattern:
+
+```
+/api/{resource}/{action}/{id}
+```
+
+## API Version
+
+Current API version: **1.0.0**
+
+<Note>
+  The API version is included in the root endpoint response. Version information helps track compatibility and changes over time.
+</Note>
+
+## Available Endpoints
+
+The Zoo Arcadia API provides the following endpoints:
+
+### Animals
+
+- `GET /api/animals` - List all animals with their details
+- `GET /api/animals/show?id={id}` - Get detailed information about a specific animal
+
+### Habitats
+
+- `GET /api/habitats` - List all habitats in the zoo
+- `GET /api/habitats/show?id={id}` - Get detailed information about a specific habitat
+
+### Services
+
+- `GET /api/services` - List all available zoo services
+
+### Schedules
+
+- `GET /api/schedules` - Get zoo opening hours and feeding schedules
+
+### Testimonials
+
+- `GET /api/testimonials` - Get validated visitor testimonials
+
+### Root Endpoint
+
+- `GET /api` - Returns API information and available endpoints
+
+<CodeGroup>
+
+```bash cURL
+curl https://your-domain.com/api
+```
+
+```javascript JavaScript
+fetch('https://your-domain.com/api')
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+```php PHP
+$response = file_get_contents('https://your-domain.com/api');
+$data = json_decode($response, true);
+```
+
+</CodeGroup>
+
+## Response Format
+
+All API responses are returned in JSON format with UTF-8 encoding and pretty-printed for readability.
+
+### Successful Response
+
+Successful requests return a response with the following structure:
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response data here
+  },
+  "message": "Optional success message"
+}
+```
+
+### Root Endpoint Response
+
+The root `/api` endpoint returns API metadata:
+
+```json
+{
+  "name": "Zoo ARCADIA API",
+  "version": "1.0.0",
+  "endpoints": {
+    "GET /api/animals": "List all animals",
+    "GET /api/animals/{id}": "Get animal by ID",
+    "GET /api/habitats": "List all habitats",
+    "GET /api/habitats/{id}": "Get habitat by ID",
+    "GET /api/services": "List all services",
+    "GET /api/schedules": "Get zoo schedules",
+    "GET /api/testimonials": "Get validated testimonials"
+  }
+}
+```
+
+## Error Handling
+
+When an error occurs, the API returns an appropriate HTTP status code along with an error response:
+
+```json
+{
+  "error": true,
+  "message": "Description of the error"
+}
+```
+
+### Common HTTP Status Codes
+
+| Status Code | Description |
+|------------|-------------|
+| `200` | Success - Request completed successfully |
+| `400` | Bad Request - Invalid parameters or malformed request |
+| `401` | Unauthorized - Authentication required |
+| `404` | Not Found - Resource or endpoint doesn't exist |
+| `500` | Internal Server Error - Server-side error occurred |
+
+<Warning>
+  Always check the HTTP status code in addition to parsing the JSON response. Error responses will have `error: true` in the JSON body.
+</Warning>
+
+## Response Headers
+
+All API responses include standard HTTP headers:
+
+- `Content-Type: application/json` - All responses are JSON
+- `Cache-Control: no-store, no-cache, must-revalidate` - Responses are not cached
+
+## Rate Limiting
+
+Currently, the Zoo Arcadia API does not implement rate limiting. However, please be considerate with your requests to ensure optimal performance for all users.
+
+<Note>
+  Rate limiting may be implemented in future versions. Monitor API announcements for updates.
+</Note>
+
+## Data Format
+
+All data is returned in JSON format with the following characteristics:
+
+- **Character Encoding**: UTF-8
+- **Pretty Printing**: Enabled for human readability
+- **Unicode Characters**: Unescaped (native UTF-8 characters preserved)
+- **Date Format**: Standard SQL datetime format (YYYY-MM-DD HH:MM:SS)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Learn about session-based authentication and securing your requests
+  </Card>
+  <Card title="Animals Endpoint" icon="paw" href="/api/animals">
+    Explore the animals API endpoint and response structure
+  </Card>
+</CardGroup>

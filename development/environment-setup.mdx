@@ -1,0 +1,337 @@
+---
+title: Environment Setup
+description: Configure your local development environment for Zoo Arcadia
+---
+
+Set up your local development environment for Zoo Arcadia with PHP, MySQL/MariaDB, and Node.js.
+
+## Prerequisites
+
+Before starting development, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="PHP 8.2+" icon="php">
+    With Apache or PHP built-in server
+  </Card>
+  <Card title="MySQL/MariaDB" icon="database">
+    Version 8.0+ or MariaDB 11.4+
+  </Card>
+  <Card title="Node.js 18+" icon="node-js">
+    For asset compilation with Gulp
+  </Card>
+  <Card title="Composer" icon="box">
+    For PHP dependency management
+  </Card>
+</CardGroup>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Zoo Arcadia repository to your local machine:
+    
+    ```bash
+    git clone https://github.com/your-username/zoo-arcadia.git
+    cd zoo-arcadia
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install both PHP and Node.js dependencies:
+    
+    <CodeGroup>
+    ```bash PHP Dependencies
+    composer install
+    ```
+    
+    ```bash Node.js Dependencies
+    npm install
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Copy the example environment file and configure it:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Edit `.env` with your local configuration:
+    
+    ```bash .env
+    # Database Configuration
+    DB_HOST=localhost
+    DB_NAME=zoo_arcadia
+    DB_USER=root
+    DB_PASS=root
+    
+    # SMTP Configuration (for contact forms)
+    SMTP_HOST=smtp.gmail.com
+    SMTP_PORT=587
+    SMTP_SECURE=tls
+    SMTP_USER=your-email@gmail.com
+    SMTP_PASS=your-app-password
+    SMTP_FROM_EMAIL=noreply@arcadia-zoo.com
+    SMTP_FROM_NAME=Arcadia Zoo
+    
+    # Zoo Contact Email
+    ZOO_EMAIL=contacto@arcadia-zoo.com
+    
+    # Environment
+    APP_ENV=development
+    
+    # Cloudinary (Optional - for image uploads)
+    CLOUDINARY_CLOUD_NAME=your-cloud-name
+    CLOUDINARY_API_KEY=your-api-key
+    CLOUDINARY_API_SECRET=your-api-secret
+    ```
+  </Step>
+
+  <Step title="Initialize the Database">
+    Run the database deployment script:
+    
+    <Tabs>
+      <Tab title="Windows">
+        ```bash
+        deploy_database.bat
+        ```
+        
+        The script automatically detects your MySQL/MariaDB installation from:
+        - `C:\Program Files\MariaDB 11.4\bin\mariadb.exe`
+        - `C:\xampp\mysql\bin\mysql.exe`
+        - `C:\wamp64\bin\mysql\mysql8.0.31\bin\mysql.exe`
+      </Tab>
+      
+      <Tab title="Linux/Mac">
+        ```bash
+        chmod +x deploy.sh
+        ./deploy.sh
+        ```
+        
+        You can override connection settings with environment variables:
+        
+        ```bash
+        DB_HOST=localhost DB_USER=root DB_PASS=root ./deploy.sh
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Build Assets">
+    Compile SCSS and JavaScript files:
+    
+    ```bash
+    npx gulp buildCss
+    npx gulp buildJs
+    ```
+  </Step>
+
+  <Step title="Start Development Server">
+    Start the PHP development server:
+    
+    ```bash
+    php -S localhost:3001 -t public
+    ```
+    
+    Or use Apache/XAMPP/WAMP and point the document root to the `public/` directory.
+  </Step>
+</Steps>
+
+## PHP Configuration
+
+### Required Extensions
+
+Ensure the following PHP extensions are enabled in `php.ini`:
+
+```ini
+extension=gd
+extension=pdo_mysql
+extension=zip
+extension=curl
+extension=mbstring
+extension=openssl
+```
+
+### SSL Certificate Setup (Windows)
+
+<Warning>
+  On Windows, you may need to configure SSL certificates for SMTP to work properly.
+</Warning>
+
+1. Download the latest CA bundle from [curl.se](https://curl.se/docs/caextract.html)
+2. Save it to a location like `C:\php\cacert.pem`
+3. Update your `php.ini`:
+
+```ini php.ini
+[curl]
+curl.cainfo = "C:\php\cacert.pem"
+
+[openssl]
+openssl.cafile = "C:\php\cacert.pem"
+```
+
+## Switching Between Environments
+
+Zoo Arcadia provides helper scripts to switch between local and Docker configurations:
+
+<Tabs>
+  <Tab title="Switch to Local">
+    Run `switch-to-local.bat` (Windows) to configure for local development:
+    
+    ```batch switch-to-local.bat
+    @echo off
+    echo Switching to Local configuration...
+    
+    REM Create .env.local backup if needed
+    if not exist .env.local (
+        copy .env .env.local >nul
+    )
+    
+    REM Update .env for local development
+    powershell -Command "(Get-Content .env) -replace 'DB_HOST=db', 'DB_HOST=localhost' -replace 'DB_USER=zoo_user', 'DB_USER=root' -replace 'DB_PASS=zoo_password', 'DB_PASS=root' | Set-Content .env"
+    
+    echo ✅ Switched to Local configuration
+    ```
+    
+    This changes:
+    - `DB_HOST`: `db` → `localhost`
+    - `DB_USER`: `zoo_user` → `root`
+    - `DB_PASS`: `zoo_password` → `root`
+  </Tab>
+  
+  <Tab title="Switch to Docker">
+    Run `switch-to-docker.bat` (Windows) to configure for Docker:
+    
+    ```batch switch-to-docker.bat
+    @echo off
+    echo Switching to Docker configuration...
+    copy .env.docker .env >nul
+    
+    echo ✅ Switched to Docker configuration
+    ```
+    
+    This restores Docker-specific settings from `.env.docker`.
+  </Tab>
+</Tabs>
+
+## Database Configuration
+
+### Connection Settings
+
+For local development, use these default credentials:
+
+| Setting | Value |
+|---------|-------|
+| Host | `localhost` |
+| Port | `3306` |
+| Database | `zoo_arcadia` |
+| User | `root` |
+| Password | `root` (or your local MySQL password) |
+
+### Database Users
+
+The initialization script creates two database users:
+
+<AccordionGroup>
+  <Accordion title="zoo_admin - Full Access">
+    - **Username**: `zoo_admin@localhost`
+    - **Password**: `secure_password` (change in production)
+    - **Privileges**: ALL PRIVILEGES on `zoo_arcadia.*`
+    - **Purpose**: Database administration and migrations
+  </Accordion>
+  
+  <Accordion title="zoo_app - Application User">
+    - **Username**: `zoo_app@localhost`
+    - **Password**: `app_password` (change in production)
+    - **Privileges**: SELECT, INSERT, UPDATE, DELETE on `zoo_arcadia.*`
+    - **Purpose**: Runtime application queries
+  </Accordion>
+</AccordionGroup>
+
+## Verify Installation
+
+Check that everything is working:
+
+<Steps>
+  <Step title="Test Database Connection">
+    ```bash
+    mysql -u root -p zoo_arcadia
+    ```
+    
+    Run a test query:
+    
+    ```sql
+    SELECT COUNT(*) FROM users;
+    ```
+  </Step>
+  
+  <Step title="Check Compiled Assets">
+    Verify that CSS and JS files exist:
+    
+    ```bash
+    ls -la public/build/css/
+    ls -la public/build/js/
+    ```
+  </Step>
+  
+  <Step title="Access the Application">
+    Open your browser to:
+    
+    ```
+    http://localhost:3001
+    ```
+    
+    You should see the Zoo Arcadia homepage.
+  </Step>
+</Steps>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Port Already in Use">
+    If port 3001 is busy, use a different port:
+    
+    ```bash
+    php -S localhost:8000 -t public
+    ```
+    
+    Update `gulpfile.js` proxy settings accordingly.
+  </Accordion>
+  
+  <Accordion title="Database Connection Errors">
+    - Verify MySQL/MariaDB is running
+    - Check credentials in `.env`
+    - Ensure the `zoo_arcadia` database exists
+    - Test connection: `mysql -u root -p`
+  </Accordion>
+  
+  <Accordion title="Asset Compilation Fails">
+    - Clear `node_modules/`: `rm -rf node_modules && npm install`
+    - Check Node.js version: `node --version` (requires 18+)
+    - Run Gulp tasks individually: `npx gulp buildCss`, `npx gulp buildJs`
+  </Accordion>
+  
+  <Accordion title="SMTP Errors (Windows)">
+    - Install SSL certificates (see PHP Configuration section)
+    - Use an app-specific password for Gmail
+    - Test with a different SMTP provider
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Docker Deployment" icon="docker" href="/development/docker-deployment">
+    Learn how to run Zoo Arcadia with Docker
+  </Card>
+  <Card title="Database Schema" icon="database" href="/development/database-schema">
+    Explore the database structure
+  </Card>
+  <Card title="Asset Pipeline" icon="code" href="/development/asset-pipeline">
+    Understand the build process
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/overview">
+    Browse the API documentation
+  </Card>
+</CardGroup>

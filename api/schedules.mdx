@@ -1,0 +1,212 @@
+---
+title: 'Schedules API'
+description: 'Access zoo opening hours and schedule information'
+---
+
+## Overview
+
+The Schedules API provides access to Zoo Arcadia's opening hours, including regular schedule, seasonal variations, and special event timings.
+
+## Get Schedules
+
+<Note>
+  Returns the complete schedule information for the zoo, including opening and closing times for different periods.
+</Note>
+
+```http
+GET /api/schedules
+```
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of schedule objects
+  
+  <ResponseField name="id_opening" type="integer">
+    Unique identifier for the schedule entry
+  </ResponseField>
+  
+  <ResponseField name="time_slot" type="string">
+    Time period or day(s) this schedule applies to (e.g., "Monday-Friday", "Weekends", "Summer Season")
+  </ResponseField>
+  
+  <ResponseField name="opening_time" type="string">
+    Opening time in HH:MM:SS format
+  </ResponseField>
+  
+  <ResponseField name="closing_time" type="string">
+    Closing time in HH:MM:SS format
+  </ResponseField>
+  
+  <ResponseField name="status" type="string">
+    Current status of the schedule: "active", "inactive", or "seasonal"
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl https://zoo-arcadia.example.com/api/schedules
+```
+
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/schedules')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://zoo-arcadia.example.com/api/schedules')
+schedules = response.json()
+print(schedules)
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_opening": 1,
+      "time_slot": "Monday-Friday",
+      "opening_time": "09:00:00",
+      "closing_time": "18:00:00",
+      "status": "active"
+    },
+    {
+      "id_opening": 2,
+      "time_slot": "Saturday-Sunday",
+      "opening_time": "08:00:00",
+      "closing_time": "20:00:00",
+      "status": "active"
+    },
+    {
+      "id_opening": 3,
+      "time_slot": "Summer (June-August)",
+      "opening_time": "07:00:00",
+      "closing_time": "21:00:00",
+      "status": "seasonal"
+    },
+    {
+      "id_opening": 4,
+      "time_slot": "Winter (December-February)",
+      "opening_time": "10:00:00",
+      "closing_time": "17:00:00",
+      "status": "seasonal"
+    }
+  ]
+}
+```
+
+## Schedule Status Values
+
+The `status` field indicates the current state of a schedule entry:
+
+### Active
+
+Schedules that are currently in effect and apply to regular operations.
+
+```json
+{
+  "status": "active"
+}
+```
+
+### Seasonal
+
+Schedules that apply only during specific seasons or periods of the year.
+
+```json
+{
+  "status": "seasonal"
+}
+```
+
+### Inactive
+
+Schedules that are no longer in use but retained for historical reference.
+
+```json
+{
+  "status": "inactive"
+}
+```
+
+## Time Format
+
+<Note>
+  All times are returned in 24-hour format (HH:MM:SS). Convert to 12-hour format on the client side if needed.
+</Note>
+
+### Example Time Conversion
+
+<CodeGroup>
+```javascript JavaScript
+function formatTime(time24) {
+  const [hours, minutes] = time24.split(':');
+  const hour = parseInt(hours);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${period}`;
+}
+
+// Example: "18:00:00" → "6:00 PM"
+console.log(formatTime("18:00:00"));
+```
+
+```python Python
+from datetime import datetime
+
+def format_time(time_24):
+    time_obj = datetime.strptime(time_24, "%H:%M:%S")
+    return time_obj.strftime("%I:%M %p")
+
+# Example: "18:00:00" → "06:00 PM"
+print(format_time("18:00:00"))
+```
+</CodeGroup>
+
+## Use Cases
+
+### Display Current Hours
+
+Filter schedules by `status: "active"` to show visitors the current operating hours.
+
+### Show Seasonal Variations
+
+Use `status: "seasonal"` entries to inform visitors about special hours during holidays or different seasons.
+
+### Plan Visits
+
+Allow visitors to view all schedule variations to help them plan their visit based on their preferred time period.
+
+## Error Responses
+
+### Resource Not Found
+
+When the schedules endpoint is not available:
+
+```json
+{
+  "error": true,
+  "message": "Resource 'schedules' not found"
+}
+```
+
+**HTTP Status Code:** `404 Not Found`
+
+## Notes
+
+<Note>
+  Schedule information is typically updated by zoo administrators. Check the API regularly for any changes to operating hours, especially during holidays or special events.
+</Note>

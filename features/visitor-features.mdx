@@ -1,0 +1,640 @@
+---
+title: 'Visitor Features'
+description: 'Public-facing features for zoo visitors including browsing, contact forms, and testimonials'
+---
+
+## Overview
+
+Zoo Arcadia provides several features for visitors to interact with the zoo online. These features don't require authentication and are accessible to anyone visiting the website.
+
+## Public Animal Browsing
+
+Visitors can explore the zoo's animal collection through public pages.
+
+### All Animals Page
+
+The `/animals/pages/allanimals` page displays all animals with filtering options:
+
+```php
+public function allanimals() {
+    // Get Hero for Animals Page
+    $heroModel = new Hero();
+    $hero = $heroModel->getByPage('animals');
+    $slides = [];
+
+    if ($hero && $hero->has_sliders) {
+        $slideModel = new Slide();
+        $slides = $slideModel->getByHeroId($hero->id_hero);
+    }
+
+    // Get all animals
+    $animalModel = new AnimalFull();
+    $animals = $animalModel->getAll();
+
+    // Get latest health state for each animal
+    $healthReportModel = new HealthStateReport();
+    foreach ($animals as $animal) {
+        $latestReport = $healthReportModel->getLatestByAnimalId(
+            $animal->id_full_animal
+        );
+        $animal->latest_health_state = $latestReport 
+            ? $latestReport->hsr_state 
+            : null;
+    }
+
+    // Get filter data
+    $species = $specieModel->getAll();
+    $habitats = $habitatModel->getAll();
+    $nutritions = $nutritionModel->getAll();
+    
+    include_once __DIR__ . '/../views/pages/allanimals.php';
+}
+```
+
+### Features Available
+
+<CardGroup cols={2}>
+  <Card title="Animal Grid" icon="grid">
+    View all animals with images in a responsive grid layout
+  </Card>
+  <Card title="Filter by Species" icon="filter">
+    Filter animals by their species (Lion, Tiger, Elephant, etc.)
+  </Card>
+  <Card title="Filter by Habitat" icon="tree">
+    See only animals from a specific habitat
+  </Card>
+  <Card title="Filter by Health" icon="heart-pulse">
+    Filter by current health status (Healthy, Recovering, etc.)
+  </Card>
+</CardGroup>
+
+### Health States Display
+
+The system shows 21 possible health states:
+
+```php
+$allowedStates = [
+    'healthy' => 'Healthy',
+    'sick' => 'Sick',
+    'quarantined' => 'Quarantined',
+    'injured' => 'Injured',
+    'happy' => 'Happy',
+    'sad' => 'Sad',
+    'depressed' => 'Depressed',
+    'terminal' => 'Terminal',
+    'infant' => 'Infant',
+    'hungry' => 'Hungry',
+    'well' => 'Well',
+    'good_condition' => 'Good Condition',
+    'angry' => 'Angry',
+    'aggressive' => 'Aggressive',
+    'nervous' => 'Nervous',
+    'anxious' => 'Anxious',
+    'recovering' => 'Recovering',
+    'pregnant' => 'Pregnant',
+    'malnourished' => 'Malnourished',
+    'dehydrated' => 'Dehydrated',
+    'stressed' => 'Stressed'
+];
+```
+
+<Info>
+  Health states are updated by veterinarians and reflect the latest veterinary report for each animal.
+</Info>
+
+## Individual Animal Pages
+
+Visitors can view detailed information about specific animals at `/animals/pages/animalpicked?id=X`:
+
+```php
+public function animalpicked() {
+    // Get animal ID from URL
+    $id = $_GET['id'] ?? null;
+    
+    if (!$id) {
+        header('Location: /animals/pages/allanimals');
+        exit;
+    }
+
+    // Get animal data
+    $animalModel = new AnimalFull();
+    $animal = $animalModel->getById($id);
+    
+    if (!$animal) {
+        header('Location: /animals/pages/allanimals');
+        exit;
+    }
+    
+    // Get latest health report
+    $healthReportModel = new HealthStateReport();
+    $latestReport = $healthReportModel->getLatestByAnimalId($id);
+    
+    // Register click for statistics
+    if ($animal && isset($animal->animal_g_id)) {
+        // Session-based deduplication
+        if (!isset($_SESSION['animal_clicks'])) {
+            $_SESSION['animal_clicks'] = [];
+        }
+        
+        $animal_g_id = $animal->animal_g_id;
+        if (!in_array($animal_g_id, $_SESSION['animal_clicks'])) {
+            $clickModel = new AnimalClick();
+            $clickModel->registerClick($animal_g_id);
+            $_SESSION['animal_clicks'][] = $animal_g_id;
+        }
+    }
+    
+    include_once __DIR__ . '/../views/pages/animalpicked.php';
+}
+```
+
+### Information Displayed
+
+- Animal name and image
+- Species and category
+- Gender
+- Current habitat
+- Latest health status
+- Veterinary observations (if publicly visible)
+
+## Habitat Browsing
+
+Visitors can explore different habitats and the animals that live in them.
+
+### All Habitats Page
+
+`/habitats/pages/habitats` displays all zoo habitats:
+
+```php
+public function habitats() {
+    // Get all habitats
+    $habitatModel = new Habitat();
+    $habitats = $habitatModel->getAll();
+
+    // Get Hero for Habitats Page
+    $heroModel = new Hero();
+    $hero = $heroModel->getByPage('habitats');
+    $slides = [];
+
+    if ($hero && $hero->has_sliders) {
+        $slideModel = new Slide();
+        $slides = $slideModel->getByHeroId($hero->id_hero);
+    }
+
+    include_once __DIR__ . '/../views/pages/habitats.php';
+}
+```
+
+### Individual Habitat Page
+
+`/habitats/pages/habitat1?id=X` shows a specific habitat with all its animals:
+
+```php
+public function habitat1() {
+    $id = $_GET['id'] ?? null;
+    
+    // Get habitat details
+    $habitat = $habitatModel->getById($id);
+    
+    // Get animals in this habitat
+    $animals = $habitatModel->getAnimalsByHabitatId($id);
+
+    // Get latest health state for each animal
+    foreach ($animals as $animal) {
+        $latestReport = $healthReportModel->getLatestByAnimalId(
+            $animal->id_full_animal
+        );
+        $animal->latest_health_state = $latestReport->hsr_state ?? null;
+    }
+    
+    // Get filter data
+    $species = $specieModel->getAll();
+    $nutritions = $nutritionModel->getAll();
+    
+    include_once __DIR__ . '/../views/pages/habitat1.php';
+}
+```
+
+## Contact Form
+
+Visitors can contact the zoo through the contact form at `/contact/pages/contact`.
+
+### Form Fields
+
+<ParamField path="first-name" type="string" required>
+  Visitor's first name
+</ParamField>
+
+<ParamField path="last-name" type="string" required>
+  Visitor's last name
+</ParamField>
+
+<ParamField path="email" type="email" required>
+  Valid email address for response
+</ParamField>
+
+<ParamField path="subject" type="string" required>
+  Subject of the inquiry
+</ParamField>
+
+<ParamField path="message" type="text" required>
+  The visitor's message or question
+</ParamField>
+
+### Form Submission Process
+
+<Steps>
+  <Step title="CSRF token verification">
+    ```php
+    if (!csrf_verify('contact_form')) {
+        header('Location: /contact/pages/contact?msg=error');
+        exit;
+    }
+    ```
+  </Step>
+  
+  <Step title="Input validation">
+    ```php
+    // Validate email
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        header('Location: /contact/pages/contact?msg=error&error=Valid email is required');
+        exit;
+    }
+    
+    // Validate required fields
+    if (empty($firstName) || empty($lastName) || empty($subject) || empty($message)) {
+        header('Location: /contact/pages/contact?msg=error&error=All fields are required');
+        exit;
+    }
+    ```
+  </Step>
+  
+  <Step title="Save to database">
+    ```php
+    $formContactModel = new FormContact();
+    $contactId = $formContactModel->create(
+        $firstName,
+        $lastName,
+        $email,
+        $subject,
+        $message
+    );
+    ```
+  </Step>
+  
+  <Step title="Send notification email">
+    ```php
+    $zooEmail = $_ENV['ZOO_EMAIL'] ?? $_ENV['SMTP_FROM_EMAIL'] ?? 'contact@arcadia-zoo.com';
+    
+    $emailResult = EmailHelper::sendContactFormEmail(
+        $zooEmail,
+        $firstName,
+        $lastName,
+        $email,
+        $subject,
+        $message
+    );
+    ```
+  </Step>
+  
+  <Step title="Confirmation message">
+    ```php
+    header('Location: /contact/pages/contact?msg=success&message=Thank you for your message!');
+    exit;
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The form is saved to the database even if the email fails. Employees can manually reply from the back office.
+</Note>
+
+### Employee Management
+
+Employees can view and respond to contact form submissions through the back office:
+
+- View all contact submissions
+- Mark as read/unread
+- Mark as "sent" after replying
+- Filter by status
+- Search by email or subject
+
+## Testimonial System
+
+Visitors can leave testimonials about their zoo experience.
+
+### Creating Testimonials
+
+Visitors submit testimonials through a public form:
+
+```php
+// Public testimonial creation
+public function create($pseudo, $message, $rating)
+{
+    // Validate rating (1-5)
+    $rating = (int)$rating;
+    if ($rating < 1 || $rating > 5) {
+        return false;
+    }
+
+    // Sanitize inputs
+    $pseudo = trim($pseudo);
+    $message = trim($message);
+
+    // Limit pseudo length
+    if (strlen($pseudo) > 100) {
+        $pseudo = substr($pseudo, 0, 100);
+    }
+
+    $sql = "INSERT INTO testimonials (pseudo, message, rating, status) 
+            VALUES (:pseudo, :message, :rating, 'pending')";
+
+    $stmt = $this->db->prepare($sql);
+    return $stmt->execute([
+        ':pseudo' => $pseudo,
+        ':message' => $message,
+        ':rating' => $rating
+    ]);
+}
+```
+
+### Testimonial Fields
+
+<ParamField path="pseudo" type="string" required>
+  Visitor's pseudonym (max 100 characters)
+</ParamField>
+
+<ParamField path="message" type="text" required>
+  The testimonial message
+</ParamField>
+
+<ParamField path="rating" type="integer" required>
+  Rating from 1 to 5 stars
+</ParamField>
+
+### Moderation Workflow
+
+Testimonials go through a three-status workflow:
+
+<Steps>
+  <Step title="Pending">
+    Initial status when submitted. Not visible to public. Awaiting admin/employee review.
+  </Step>
+  
+  <Step title="Validated">
+    Approved by admin/employee. Visible on public pages.
+  </Step>
+  
+  <Step title="Rejected">
+    Declined by admin/employee. Not visible to public.
+  </Step>
+</Steps>
+
+### Admin/Employee Moderation
+
+Admins and Employees can manage testimonials:
+
+```php
+// Validate testimonial
+public function validate($id, $validatorId)
+{
+    $sql = "UPDATE testimonials 
+            SET status = 'validated',
+                validated_at = CURRENT_TIMESTAMP,
+                validated_by = :validator_id,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id_testimonial = :id";
+
+    $stmt = $this->db->prepare($sql);
+    return $stmt->execute([
+        ':validator_id' => $validatorId,
+        ':id' => $id
+    ]);
+}
+
+// Reject testimonial
+public function reject($id, $validatorId)
+{
+    $sql = "UPDATE testimonials 
+            SET status = 'rejected',
+                validated_at = CURRENT_TIMESTAMP,
+                validated_by = :validator_id,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id_testimonial = :id";
+
+    $stmt = $this->db->prepare($sql);
+    return $stmt->execute([
+        ':validator_id' => $validatorId,
+        ':id' => $id
+    ]);
+}
+```
+
+<Accordion title="Moderation Features">
+  - **View all testimonials** with status filtering
+  - **Edit testimonials** to clean inappropriate content before validation
+  - **Validate** to make public
+  - **Reject** to hide from public
+  - **Delete** to permanently remove
+  - **Statistics** showing pending, validated, rejected counts
+</Accordion>
+
+### Editing Before Validation
+
+Admins can edit testimonials to clean up content:
+
+```php
+public function update($id, $pseudo, $message, $rating)
+{
+    // Validate rating
+    $rating = (int)$rating;
+    if ($rating < 1 || $rating > 5) {
+        return false;
+    }
+
+    // Sanitize inputs
+    $pseudo = trim($pseudo);
+    $message = trim($message);
+
+    if (strlen($pseudo) > 100) {
+        $pseudo = substr($pseudo, 0, 100);
+    }
+
+    $sql = "UPDATE testimonials 
+            SET pseudo = :pseudo, 
+                message = :message, 
+                rating = :rating,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id_testimonial = :id";
+
+    $stmt = $this->db->prepare($sql);
+    return $stmt->execute([
+        ':pseudo' => $pseudo,
+        ':message' => $message,
+        ':rating' => $rating,
+        ':id' => $id
+    ]);
+}
+```
+
+<Info>
+  Editing is useful for fixing typos, removing inappropriate language, or cleaning up formatting while keeping the testimonial's core message.
+</Info>
+
+### Displaying Testimonials
+
+Only validated testimonials appear on public pages:
+
+```php
+// Get validated testimonials for public display
+public function getValidated()
+{
+    $sql = "SELECT * FROM testimonials 
+            WHERE status = 'validated' 
+            ORDER BY created_at DESC";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_OBJ);
+}
+
+// Get best testimonial for homepage
+public function getBest()
+{
+    // Get highest rated, or most recent if tie
+    $sql = "SELECT * FROM testimonials 
+            WHERE status = 'validated' 
+            ORDER BY rating DESC, created_at DESC 
+            LIMIT 1";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_OBJ);
+}
+```
+
+### Testimonial Statistics
+
+Admins can view statistics:
+
+```php
+public function getStats()
+{
+    $sql = "SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'validated' THEN 1 ELSE 0 END) as validated,
+                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+                AVG(rating) as avg_rating
+            FROM testimonials";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_OBJ);
+}
+```
+
+Statistics include:
+- Total testimonials
+- Pending count
+- Validated count  
+- Rejected count
+- Average rating across all testimonials
+
+## Click Tracking
+
+The system tracks which animals are most popular with visitors using session-based deduplication.
+
+### How Click Tracking Works
+
+<Steps>
+  <Step title="Initialize session tracking">
+    ```php
+    if (!isset($_SESSION['animal_clicks'])) {
+        $_SESSION['animal_clicks'] = [];
+    }
+    ```
+  </Step>
+  
+  <Step title="Check if already clicked">
+    ```php
+    $animal_g_id = $animal->animal_g_id;
+    if (!in_array($animal_g_id, $_SESSION['animal_clicks'])) {
+        // Not clicked yet in this session
+    }
+    ```
+  </Step>
+  
+  <Step title="Register click">
+    ```php
+    $clickModel = new AnimalClick();
+    $clickModel->registerClick($animal_g_id);
+    ```
+  </Step>
+  
+  <Step title="Mark as clicked in session">
+    ```php
+    $_SESSION['animal_clicks'][] = $animal_g_id;
+    ```
+  </Step>
+</Steps>
+
+### Click Aggregation
+
+Clicks are aggregated by month and year:
+
+```php
+public function registerClick($animal_g_id)
+{
+    $year = (int)date('Y');
+    $month = (int)date('n');
+
+    $sql = "INSERT INTO animal_clicks (animal_g_id, year, month, click_count) 
+            VALUES (:animal_id, :year, :month, 1)
+            ON DUPLICATE KEY UPDATE 
+            click_count = click_count + 1,
+            updated_at = CURRENT_TIMESTAMP";
+
+    $stmt = $this->db->prepare($sql);
+    return $stmt->execute([
+        ':animal_id' => $animal_g_id,
+        ':year' => $year,
+        ':month' => $month
+    ]);
+}
+```
+
+<Note>
+  Session-based deduplication prevents spam while still allowing accurate popularity tracking. Each visitor can only register one click per animal per session.
+</Note>
+
+### Viewing Click Statistics
+
+Admins can view:
+
+```php
+// Top 10 most popular animals
+$topAnimals = $clickModel->getTopAnimals(10);
+
+// Current month statistics
+$monthStats = $clickModel->getCurrentMonthStats();
+
+// Total clicks across all animals
+$totalClicks = $clickModel->getTotalClicks();
+```
+
+## Code Reference
+
+- **Animal Pages**: `App/animals/controllers/animals_pages_controller.php:31-149`
+- **Habitat Pages**: `App/habitats/controllers/habitats_pages_controller.php:30-138`
+- **Contact Form**: `App/contact/controllers/contact_pages_controller.php:25-133`
+- **Testimonials (Public)**: `App/testimonials/controllers/testimonials_pages_controller.php`
+- **Testimonials (Admin)**: `App/testimonials/controllers/testimonials_gest_controller.php:25-284`
+- **Testimonial Model**: `App/testimonials/models/testimonial.php:18-371`
+- **Click Tracking**: `App/animals/models/animalClick.php:24-53`
+
+<Accordion title="Related Features">
+  - [Animal Management](/features/animal-management) - Managing animals
+  - [Habitat Management](/features/habitat-management) - Managing habitats
+  - [Roles & Permissions](/features/roles-permissions) - Admin and employee access
+</Accordion>

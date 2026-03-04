@@ -1,0 +1,256 @@
+---
+title: Authentication
+description: Learn how to authenticate with the Zoo Arcadia API using session-based authentication
+---
+
+# Authentication
+
+The Zoo Arcadia API uses session-based authentication that integrates with the main web application's authentication system. Most API endpoints are public and do not require authentication, while certain administrative endpoints require an active user session.
+
+## Authentication Method
+
+The API uses **session-based authentication** with the following characteristics:
+
+- Session cookies are used to maintain authentication state
+- Sessions are shared between the web application and API
+- Session duration is 11 hours (39,600 seconds)
+- Secure cookie parameters prevent common attacks
+
+<Note>
+  The API does not use API keys or OAuth tokens. It relies on the same session management as the web application.
+</Note>
+
+## Public vs. Authenticated Endpoints
+
+### Public Endpoints (No Authentication Required)
+
+The following API endpoints are publicly accessible without authentication:
+
+- `GET /api` - API information
+- `GET /api/animals` - List all animals
+- `GET /api/animals/show?id={id}` - Get animal details
+- `GET /api/habitats` - List all habitats
+- `GET /api/habitats/show?id={id}` - Get habitat details
+- `GET /api/services` - List zoo services
+- `GET /api/schedules` - Get zoo schedules
+- `GET /api/testimonials` - Get validated testimonials
+
+### Authenticated Endpoints
+
+Certain endpoints require authentication and an active session:
+
+- Administrative endpoints (resource management)
+- User-specific data endpoints
+- Content management endpoints
+
+<Warning>
+  Attempting to access authenticated endpoints without a valid session will result in a redirect to the login page or an authentication error.
+</Warning>
+
+## How to Authenticate
+
+To authenticate with the API, you need to establish a session by logging in through the web application.
+
+### Step 1: Login
+
+Send a POST request to the login endpoint with valid credentials:
+
+```bash
+curl -X POST https://your-domain.com/auth/pages/login \
+  -d "username=your_username" \
+  -d "password=your_password" \
+  -c cookies.txt
+```
+
+<Note>
+  The `-c cookies.txt` flag saves the session cookie to a file for subsequent requests.
+</Note>
+
+### Step 2: Make Authenticated Requests
+
+Include the session cookie in subsequent API requests:
+
+```bash
+curl https://your-domain.com/api/animals \
+  -b cookies.txt
+```
+
+### Browser-Based Authentication
+
+When making API requests from a web browser:
+
+1. Users must first log in through the web interface at `/auth/pages/login`
+2. The browser automatically includes session cookies in API requests
+3. No additional authentication headers are needed
+
+<CodeGroup>
+
+```javascript JavaScript (Browser)
+// After user is logged in via web interface
+fetch('/api/animals', {
+  credentials: 'same-origin' // Include cookies
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+```javascript JavaScript (Node.js)
+const axios = require('axios');
+
+// Login first
+const loginResponse = await axios.post(
+  'https://your-domain.com/auth/pages/login',
+  {
+    username: 'your_username',
+    password: 'your_password'
+  },
+  {
+    withCredentials: true,
+    jar: cookieJar // Use a cookie jar
+  }
+);
+
+// Make authenticated request
+const apiResponse = await axios.get(
+  'https://your-domain.com/api/animals',
+  {
+    withCredentials: true,
+    jar: cookieJar
+  }
+);
+```
+
+</CodeGroup>
+
+## Session Management
+
+### Session Duration
+
+Sessions have the following characteristics:
+
+- **Lifetime**: 11 hours (39,600 seconds)
+- **Timeout**: Sessions expire after 11 hours of inactivity
+- **Auto-renewal**: Each authenticated request updates the last activity timestamp
+
+### Session Expiration
+
+When a session expires:
+
+1. Users are automatically redirected to `/auth/pages/login?msg=session_expired`
+2. Session data is completely destroyed
+3. Session cookies are removed
+4. A new login is required to continue
+
+<Warning>
+  Sessions that exceed 11 hours of inactivity are automatically destroyed. Active users will have their sessions automatically renewed.
+</Warning>
+
+### Session Security
+
+Sessions are configured with secure parameters:
+
+```php
+[
+  'lifetime' => 0,              // Cookie expires when browser closes
+  'path' => '/',                // Valid for entire site
+  'secure' => true,             // HTTPS only (production)
+  'httponly' => true,           // JavaScript cannot access
+  'samesite' => 'Lax'          // CSRF protection
+]
+```
+
+- **HttpOnly**: Prevents JavaScript from accessing session cookies (XSS protection)
+- **Secure**: Cookies are only sent over HTTPS in production
+- **SameSite**: Lax mode allows navigation from external links while preventing CSRF attacks
+
+## CSRF Protection
+
+For state-changing requests (POST, PUT, DELETE), CSRF protection may be required:
+
+### CSRF Token Usage
+
+1. CSRF tokens are included in web forms
+2. The same session-based CSRF protection applies to API requests
+3. For POST requests, include the CSRF token if required by the endpoint
+
+<Note>
+  Most public GET endpoints do not require CSRF tokens. CSRF protection is primarily enforced on state-changing operations.
+</Note>
+
+## Authentication Errors
+
+### Common Authentication Issues
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| Redirect to login | No active session | Log in through `/auth/pages/login` |
+| Session expired | Inactive for 11+ hours | Re-authenticate |
+| Invalid session | Corrupted session data | Clear cookies and log in again |
+| Unauthorized | Insufficient permissions | Verify user role and permissions |
+
+### Handling Redirects
+
+API requests to authenticated endpoints without a valid session will result in:
+
+- HTTP redirect (302) to `/auth/pages/login`
+- Or JSON error response with 401 status code (depending on endpoint)
+
+<CodeGroup>
+
+```javascript Handling Auth Errors
+fetch('/api/protected-endpoint', {
+  credentials: 'same-origin'
+})
+  .then(response => {
+    if (response.redirected) {
+      // User is not authenticated
+      window.location.href = response.url;
+      return;
+    }
+    if (response.status === 401) {
+      // Unauthorized
+      console.error('Authentication required');
+      return;
+    }
+    return response.json();
+  })
+  .then(data => console.log(data));
+```
+
+</CodeGroup>
+
+## Best Practices
+
+### For Public Endpoints
+
+- No authentication needed for read-only operations
+- Simply make GET requests to public endpoints
+- No need to manage sessions or cookies
+
+### For Authenticated Endpoints
+
+1. **Establish Session**: Log in through the web interface first
+2. **Include Cookies**: Always include session cookies in requests
+3. **Handle Expiration**: Implement logic to re-authenticate when sessions expire
+4. **Use HTTPS**: Always use HTTPS in production for security
+5. **Monitor Activity**: Keep sessions active by making periodic requests
+
+### Security Recommendations
+
+<Warning>
+  - Never expose session cookies in client-side code
+  - Always use HTTPS in production environments
+  - Implement proper error handling for authentication failures
+  - Clear sessions on logout to prevent unauthorized access
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Overview" icon="book" href="/api/overview">
+    Return to API overview and available endpoints
+  </Card>
+  <Card title="Animals Endpoint" icon="paw" href="/api/animals">
+    Start making requests to the animals API
+  </Card>
+</CardGroup>

@@ -1,0 +1,174 @@
+---
+title: 'Services API'
+description: 'Retrieve information about zoo services and facilities'
+---
+
+## Overview
+
+The Services API provides access to information about various services offered at Zoo Arcadia, including guided tours, restaurants, gift shops, and other visitor facilities.
+
+## List All Services
+
+<Note>
+  Returns a complete list of all services and facilities available at the zoo.
+</Note>
+
+```http
+GET /api/services
+```
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of service objects
+  
+  <ResponseField name="id_service" type="integer">
+    Unique identifier for the service
+  </ResponseField>
+  
+  <ResponseField name="service_title" type="string">
+    Title/name of the service
+  </ResponseField>
+  
+  <ResponseField name="service_description" type="string">
+    Detailed description of the service
+  </ResponseField>
+  
+  <ResponseField name="link" type="string">
+    URL or path related to the service (e.g., booking page)
+  </ResponseField>
+  
+  <ResponseField name="type" type="string">
+    Type of service: "featured", "service", or "habitat"
+  </ResponseField>
+  
+  <ResponseField name="media_path" type="string">
+    URL path to the service's image (original size)
+  </ResponseField>
+  
+  <ResponseField name="media_path_medium" type="string">
+    URL path to the service's medium-sized image
+  </ResponseField>
+  
+  <ResponseField name="media_path_large" type="string">
+    URL path to the service's large-sized image
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl https://zoo-arcadia.example.com/api/services
+```
+
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/services')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://zoo-arcadia.example.com/api/services')
+services = response.json()
+print(services)
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_service": 1,
+      "service_title": "Guided Safari Tour",
+      "service_description": "Join our expert guides for an unforgettable safari experience through the Savannah habitat.",
+      "link": "/tours/safari",
+      "type": "featured",
+      "media_path": "/uploads/services/safari-tour.jpg",
+      "media_path_medium": "/uploads/services/safari-tour-medium.jpg",
+      "media_path_large": "/uploads/services/safari-tour-large.jpg"
+    },
+    {
+      "id_service": 2,
+      "service_title": "Savannah Restaurant",
+      "service_description": "Enjoy delicious meals with a view of the Savannah habitat.",
+      "link": "/dining/savannah-restaurant",
+      "type": "service",
+      "media_path": "/uploads/services/restaurant.jpg",
+      "media_path_medium": "/uploads/services/restaurant-medium.jpg",
+      "media_path_large": "/uploads/services/restaurant-large.jpg"
+    },
+    {
+      "id_service": 3,
+      "service_title": "Zoo Gift Shop",
+      "service_description": "Browse our selection of souvenirs, toys, and educational materials.",
+      "link": "/shop",
+      "type": "service",
+      "media_path": "/uploads/services/gift-shop.jpg",
+      "media_path_medium": "/uploads/services/gift-shop-medium.jpg",
+      "media_path_large": "/uploads/services/gift-shop-large.jpg"
+    }
+  ]
+}
+```
+
+## Service Types
+
+Services are categorized into three types:
+
+### Featured Services
+
+Featured services are highlighted offerings displayed prominently on the homepage. These typically include:
+- Special tours
+- Premium experiences
+- Educational programs
+
+### Regular Services
+
+Standard services and facilities available to all visitors:
+- Restaurants and cafes
+- Gift shops
+- Restrooms and facilities
+- Information centers
+
+### Habitat Services
+
+Services specific to individual habitats:
+- Habitat-specific guided tours
+- Feeding demonstrations
+- Educational presentations
+
+## Error Responses
+
+### Resource Not Found
+
+When the services endpoint is not available:
+
+```json
+{
+  "error": true,
+  "message": "Resource 'services' not found"
+}
+```
+
+**HTTP Status Code:** `404 Not Found`
+
+## Notes
+
+<Note>
+  The Services API returns all services regardless of type. You can filter services by type on the client side using the `type` field.
+</Note>
+
+<Note>
+  Service images are available in three sizes (original, medium, large) to optimize for different display contexts and screen sizes.
+</Note>

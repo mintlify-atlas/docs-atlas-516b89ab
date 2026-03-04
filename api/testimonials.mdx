@@ -1,0 +1,245 @@
+---
+title: 'Testimonials API'
+description: 'Access validated visitor testimonials and reviews'
+---
+
+## Overview
+
+The Testimonials API provides access to validated visitor feedback and reviews. Only testimonials that have been approved by zoo staff are returned through this public API endpoint.
+
+## Get Validated Testimonials
+
+<Note>
+  Returns a list of all validated testimonials from zoo visitors. Testimonials are sorted by creation date in descending order (newest first).
+</Note>
+
+```http
+GET /api/testimonials
+```
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of validated testimonial objects
+  
+  <ResponseField name="id_testimonial" type="integer">
+    Unique identifier for the testimonial
+  </ResponseField>
+  
+  <ResponseField name="pseudo" type="string">
+    Visitor's pseudonym/nickname (max 100 characters)
+  </ResponseField>
+  
+  <ResponseField name="message" type="string">
+    The testimonial message content
+  </ResponseField>
+  
+  <ResponseField name="rating" type="integer">
+    Rating from 1 to 5 stars
+  </ResponseField>
+  
+  <ResponseField name="status" type="string">
+    Status of the testimonial (always "validated" for this endpoint)
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    Timestamp when the testimonial was created (ISO 8601 format)
+  </ResponseField>
+  
+  <ResponseField name="validated_at" type="string">
+    Timestamp when the testimonial was validated by staff
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    Timestamp of the last update to the testimonial
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl https://zoo-arcadia.example.com/api/testimonials
+```
+
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/testimonials')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://zoo-arcadia.example.com/api/testimonials')
+testimonials = response.json()
+print(testimonials)
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_testimonial": 42,
+      "pseudo": "Sarah_M",
+      "message": "Amazing experience! The animals look so happy and well cared for. Our kids especially loved the lion feeding demonstration. Highly recommend visiting!",
+      "rating": 5,
+      "status": "validated",
+      "created_at": "2026-03-01T14:30:00Z",
+      "validated_at": "2026-03-01T16:15:00Z",
+      "updated_at": "2026-03-01T16:15:00Z"
+    },
+    {
+      "id_testimonial": 41,
+      "pseudo": "John_Doe",
+      "message": "Great zoo with beautiful habitats. The staff are knowledgeable and friendly. We'll definitely be back!",
+      "rating": 4,
+      "status": "validated",
+      "created_at": "2026-02-28T10:45:00Z",
+      "validated_at": "2026-02-28T11:30:00Z",
+      "updated_at": "2026-02-28T11:30:00Z"
+    },
+    {
+      "id_testimonial": 38,
+      "pseudo": "Nature_Lover_123",
+      "message": "Wonderful conservation efforts. You can tell the zoo really cares about the animals and education.",
+      "rating": 5,
+      "status": "validated",
+      "created_at": "2026-02-25T09:20:00Z",
+      "validated_at": "2026-02-25T14:00:00Z",
+      "updated_at": "2026-02-25T14:00:00Z"
+    }
+  ]
+}
+```
+
+## Rating System
+
+<Note>
+  All ratings are on a scale of 1 to 5, where:
+  - 5 stars = Excellent
+  - 4 stars = Very Good
+  - 3 stars = Good
+  - 2 stars = Fair
+  - 1 star = Poor
+</Note>
+
+### Display Ratings
+
+<CodeGroup>
+```javascript JavaScript
+function displayRating(rating) {
+  const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  return stars;
+}
+
+// Example: 4 → "★★★★☆"
+console.log(displayRating(4));
+```
+
+```python Python
+def display_rating(rating):
+    filled_stars = '★' * rating
+    empty_stars = '☆' * (5 - rating)
+    return filled_stars + empty_stars
+
+# Example: 4 → "★★★★☆"
+print(display_rating(4))
+```
+</CodeGroup>
+
+## Testimonial Status
+
+Testimonials go through a validation process before appearing in the public API:
+
+1. **Pending** - Submitted by visitors but not yet reviewed
+2. **Validated** - Approved by staff and visible through this API
+3. **Rejected** - Not approved for public display
+
+<Note>
+  Only testimonials with `status: "validated"` are returned by this endpoint. This ensures all public feedback is appropriate and genuine.
+</Note>
+
+## Use Cases
+
+### Display on Homepage
+
+Show recent testimonials or highest-rated reviews on your homepage:
+
+<CodeGroup>
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/testimonials')
+  .then(response => response.json())
+  .then(data => {
+    // Get testimonials with 5-star ratings
+    const topRated = data.data.filter(t => t.rating === 5).slice(0, 3);
+    displayTestimonials(topRated);
+  });
+```
+</CodeGroup>
+
+### Calculate Average Rating
+
+Determine the overall visitor satisfaction:
+
+<CodeGroup>
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/testimonials')
+  .then(response => response.json())
+  .then(data => {
+    const ratings = data.data.map(t => t.rating);
+    const average = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+    console.log(`Average rating: ${average.toFixed(1)} stars`);
+  });
+```
+
+```python Python
+import requests
+from statistics import mean
+
+response = requests.get('https://zoo-arcadia.example.com/api/testimonials')
+data = response.json()
+
+ratings = [t['rating'] for t in data['data']]
+average = mean(ratings)
+print(f"Average rating: {average:.1f} stars")
+```
+</CodeGroup>
+
+## Error Responses
+
+### Resource Not Found
+
+When the testimonials endpoint is not available:
+
+```json
+{
+  "error": true,
+  "message": "Resource 'testimonials' not found"
+}
+```
+
+**HTTP Status Code:** `404 Not Found`
+
+## Notes
+
+<Note>
+  Pseudonyms are limited to 100 characters and may be moderated by staff before validation to ensure appropriateness.
+</Note>
+
+<Note>
+  Testimonials are returned in descending order by creation date, so the most recent feedback appears first in the array.
+</Note>
+
+<Note>
+  The API does not support filtering or pagination at this time. All validated testimonials are returned in a single response.
+</Note>

@@ -1,0 +1,407 @@
+---
+title: Veterinarian Guide
+description: Guide for veterinarians managing animal health reports, tracking nutrition, and monitoring animal wellbeing at Zoo Arcadia.
+---
+
+## Overview
+
+As a veterinarian at Zoo Arcadia, you're responsible for documenting animal health assessments, tracking medical observations, and providing nutrition recommendations. This system helps you maintain comprehensive health records for all animals in the zoo.
+
+## Veterinarian Dashboard
+
+Your dashboard (`/home/pages/start`) shows:
+
+- Recent health reports you've created
+- Animals requiring upcoming checkups
+- Latest feeding logs from employees
+- Quick access to create new health reports
+
+<Tip>
+  Bookmark `/vreports/gest/start` for quick access to all health reports.
+</Tip>
+
+## Creating Health State Reports
+
+Health state reports document animal checkups and observations.
+
+<Steps>
+  <Step title="Access Report Creation">
+    Navigate to `/vreports/gest/create` or click "Create Health Report" from your dashboard.
+  </Step>
+  
+  <Step title="Select the Animal">
+    Choose which animal you examined from the dropdown list. The list shows all animals currently in the zoo.
+  </Step>
+  
+  <Step title="Record the Health State">
+    Select the animal's current health/mood state from available options:
+    
+    **Positive States:**
+    - Healthy
+    - Well
+    - Good Condition
+    - Happy
+    - Recovering
+    
+    **Monitoring States:**
+    - Infant
+    - Pregnant
+    - Hungry
+    
+    **Concern States:**
+    - Sad
+    - Depressed
+    - Stressed
+    - Nervous
+    - Anxious
+    
+    **Medical Attention States:**
+    - Sick
+    - Injured
+    - Quarantined
+    - Malnourished
+    - Dehydrated
+    - Angry
+    - Aggressive
+    - Terminal
+  </Step>
+  
+  <Step title="Set Review Date">
+    Enter the date of the checkup. This can be today's date or a past date if you're recording historical data.
+  </Step>
+  
+  <Step title="Write Veterinary Observations">
+    In the "Vet Observations" field, document:
+    - Physical examination findings
+    - Behavioral observations
+    - Any symptoms or concerns
+    - Treatment administered
+    - Recommendations for care staff
+    
+    This field is required and should be comprehensive.
+  </Step>
+  
+  <Step title="Add Optional Details (Optional)">
+    Use the "Optional Animal Details" field for:
+    - Long-term care plans
+    - Dietary recommendations
+    - Special monitoring instructions
+    - Follow-up scheduling notes
+  </Step>
+  
+  <Step title="Submit the Report">
+    Click Save. The report is automatically attributed to your user account.
+  </Step>
+</Steps>
+
+<Note>
+  All health reports are timestamped and permanently associated with your user account for accountability and traceability.
+</Note>
+
+## Viewing Animal Health History
+
+### Accessing All Reports
+
+Navigate to `/vreports/gest/start` to see all health reports in the system. The list displays:
+
+- Report ID
+- Animal name
+- Health state
+- Review date
+- Veterinarian who created it
+- Last updated timestamp
+
+### Viewing Individual Reports
+
+Click on any report to view full details at `/vreports/gest/view?id={report_id}`:
+
+- Complete animal information (name, species, habitat, gender)
+- Health state with color-coded badge
+- Full veterinary observations
+- Optional details
+- Veterinarian information
+- Creation and update timestamps
+
+### Filtering and Searching Reports
+
+Use the search and filter features on the reports list to:
+
+- Find reports by animal name
+- Filter by health state
+- Sort by date (newest/oldest first)
+- View only your own reports
+
+<Tip>
+  To quickly review an animal's health trend, search for the animal name and sort by date to see the progression of health states over time.
+</Tip>
+
+## Editing Health Reports
+
+You can update health reports to correct information or add follow-up observations.
+
+<Steps>
+  <Step title="Access the Report">
+    From `/vreports/gest/start`, click "Edit" on the report you want to modify.
+  </Step>
+  
+  <Step title="Update Information">
+    You can modify:
+    - Health state
+    - Review date
+    - Veterinary observations
+    - Optional details
+    
+    **Note:** You cannot change which animal the report is about (this preserves historical integrity).
+  </Step>
+  
+  <Step title="Save Changes">
+    Submit the form. The "Last Updated" timestamp and your user ID are recorded.
+  </Step>
+</Steps>
+
+<Warning>
+  Health reports cannot be reassigned to different animals after creation. This ensures the historical record remains accurate. If you selected the wrong animal, delete the report and create a new one.
+</Warning>
+
+## Generating Report PDFs
+
+You can generate printer-friendly PDF versions of health reports for physical filing or sharing.
+
+<Steps>
+  <Step title="View the Report">
+    Navigate to the report detail page.
+  </Step>
+  
+  <Step title="Click Generate PDF">
+    Access `/vreports/gest/generatePDF?id={report_id}` or click the PDF button.
+  </Step>
+  
+  <Step title="Print or Save">
+    The PDF opens in your browser. Use the print button or Ctrl+P to:
+    - Print to a physical printer
+    - Save as PDF file
+    - Email to colleagues
+  </Step>
+</Steps>
+
+The PDF includes:
+
+- Zoo Arcadia header
+- Complete report information
+- Animal details
+- Health status with color coding
+- All observations
+- Veterinarian signature information
+- Generation timestamp
+
+## Nutrition Tracking and Recommendations
+
+### Viewing Animal Nutrition Plans
+
+While you cannot directly edit nutrition plans (that's an admin function), you can:
+
+1. View current nutrition assignments for all animals
+2. Review feeding history at `/animals/feeding/start`
+3. See what employees have logged for feedings
+
+### Recommending Nutrition Changes
+
+If an animal requires dietary adjustments:
+
+<Steps>
+  <Step title="Document in Health Report">
+    Create a health report for the animal and include detailed nutrition recommendations in the "Veterinary Observations" or "Optional Details" fields.
+  </Step>
+  
+  <Step title="Notify Administration">
+    Administrators can create new nutrition plans or modify existing ones. Your health report serves as documentation for the change.
+  </Step>
+  
+  <Step title="Monitor Implementation">
+    Review feeding logs to verify staff are following the new nutrition plan.
+  </Step>
+</Steps>
+
+<Tip>
+  Be specific in your nutrition recommendations: include food type, quantity, frequency, and any supplements or restrictions.
+</Tip>
+
+### Reviewing Feeding Logs
+
+Access feeding logs at `/animals/feeding/start` to monitor:
+
+- What food was given to each animal
+- Quantity provided
+- Date and time of feeding
+- Which employee performed the feeding
+
+<CardGroup cols={2}>
+  <Card title="View by Animal" icon="paw">
+    Click on an animal to see all its feeding history at `/animals/feeding/view?animal_id={id}`.
+  </Card>
+  
+  <Card title="Identify Patterns" icon="chart-line">
+    Look for feeding irregularities that might correlate with health issues.
+  </Card>
+</CardGroup>
+
+## Report Filtering and Search
+
+### Advanced Filtering
+
+The health reports list supports multiple filtering options:
+
+**By Health State:**
+- Healthy animals only
+- Animals requiring attention (sick, injured, etc.)
+- Animals under observation (quarantined, recovering)
+
+**By Date Range:**
+- Reports from the last 7 days
+- Reports from the last 30 days
+- Custom date range
+
+**By Animal:**
+- All reports for a specific animal
+- Animals in a specific habitat
+
+### Search Tips
+
+<Tip>
+  Use partial search terms to find reports. For example, searching "leo" will find reports for animals like "Leonardo" or "Leo the Lion".
+</Tip>
+
+### Sorting Options
+
+- **Newest First**: See most recent checkups
+- **Oldest First**: Review historical data
+- **By Animal Name**: Alphabetical organization
+- **By Health State**: Group similar conditions
+
+## Habitat Suggestions
+
+If you identify habitat-related issues affecting animal health, you can create habitat improvement suggestions:
+
+1. Navigate to `/habitats/suggestion/create`
+2. Select the affected habitat
+3. Describe the issue and proposed improvements
+4. Submit for administrator review
+
+Administrators receive notifications and can implement approved suggestions.
+
+## Best Practices for Veterinarians
+
+<CardGroup cols={2}>
+  <Card title="Regular Checkups" icon="calendar-check">
+    Create health reports at consistent intervals for each animal to track trends over time.
+  </Card>
+  
+  <Card title="Detailed Observations" icon="notes-medical">
+    Write comprehensive observations. Future veterinarians will rely on your notes for continuity of care.
+  </Card>
+  
+  <Card title="Timely Documentation" icon="clock">
+    Enter health reports on the same day as the examination while details are fresh.
+  </Card>
+  
+  <Card title="Review History" icon="history">
+    Before examining an animal, review previous health reports to understand medical history.
+  </Card>
+</CardGroup>
+
+## Common Health States Explained
+
+### When to Use Each State
+
+**Healthy/Well/Good Condition:**
+Use for routine checkups where the animal shows no signs of illness or distress.
+
+**Happy:**
+Animal exhibits positive behavioral signs: playful, social, eating well.
+
+**Hungry:**
+Animal is underweight or showing food-seeking behavior beyond normal patterns.
+
+**Sad/Depressed:**
+Lethargic, withdrawn, loss of interest in usual activities.
+
+**Stressed/Nervous/Anxious:**
+Behavioral signs of stress: pacing, excessive vocalization, aggression toward keepers.
+
+**Sick:**
+General illness without specific diagnosis or obvious symptoms.
+
+**Injured:**
+Physical trauma, wounds, or musculoskeletal issues.
+
+**Quarantined:**
+Animal is isolated due to contagious condition or monitoring requirement.
+
+**Malnourished/Dehydrated:**
+Physical signs of inadequate nutrition or water intake.
+
+**Recovering:**
+Animal is improving from previous illness or injury.
+
+**Pregnant:**
+Confirmed or suspected pregnancy.
+
+**Terminal:**
+End-of-life care situation.
+
+<Note>
+  Choose the health state that most accurately reflects the primary concern. Additional conditions can be detailed in the observations field.
+</Note>
+
+## Troubleshooting
+
+### Report Won't Save
+
+If you encounter save errors:
+
+1. Verify all required fields are completed:
+   - Animal selection
+   - Health state
+   - Review date
+   - Veterinary observations
+2. Check that the date format is correct (YYYY-MM-DD)
+3. Ensure you're logged in (session hasn't expired)
+
+### Can't Find an Animal
+
+If an animal doesn't appear in the dropdown:
+
+- The animal may not be in the system yet (contact admin)
+- The animal may have been deleted
+- Refresh your browser and try again
+
+### Permission Denied
+
+If you can't access health reports:
+
+- Verify your account has the "Veterinarian" role
+- Contact an administrator to check your permissions
+- Ensure your account is active
+
+## Security and Privacy
+
+<Warning>
+  Health reports are permanent medical records. Ensure all information is accurate before saving. Only delete reports if they were created in error.
+</Warning>
+
+### Data Integrity
+
+- All reports are timestamped and attributed to your user account
+- Edits are logged with timestamps
+- Reports cannot be reassigned to different animals
+- Deleted reports may affect historical data continuity
+
+### Access Control
+
+Only users with veterinary permissions can:
+
+- Create health reports
+- Edit health reports
+- Generate PDFs
+
+All staff can view reports (read-only) to coordinate animal care.

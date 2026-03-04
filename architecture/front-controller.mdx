@@ -1,0 +1,305 @@
+---
+title: Front Controller Pattern
+description: How the front controller receives all requests and handles static files and URL routing
+---
+
+# Front Controller Pattern
+
+The **front controller** is the single entry point for all HTTP requests to Zoo Arcadia. Located at `public/index.php`, it acts as "The Porter" - receiving every request and deciding how to handle it.
+
+## What is a Front Controller?
+
+A front controller is a design pattern where a single component handles all incoming requests and routes them to appropriate handlers. This provides:
+
+- **Centralized request handling**: All requests go through one point
+- **Consistent processing**: Same initialization logic for every request
+- **Security**: Single point to enforce security policies
+- **Clean URLs**: Hide `.php` extensions and internal structure
+
+<Note>
+In production, the web server (Apache/Nginx) is configured to route all non-file requests to `public/index.php`. This is what enables clean URLs like `/animals/pages/allanimals` instead of `/App/animals/controllers/animals_pages_controller.php?action=allanimals`.
+</Note>
+
+## The Front Controller Code
+
+Here's the complete front controller implementation:
+
+```php public/index.php
+<?php
+/**
+ * 🏛️ ARCHITECTURE ARCADIA (Simulated Namespace)
+ * ----------------------------------------------------
+ * 📍 Logical Path: Arcadia\Public
+ * 📂 Physical File:   public/index.php
+ * 
+ * 📝 Description:
+ * MAIN FRONT CONTROLLER.
+ * "The Porter": Receives all requests and decides who to call.
+ * 
+ * 🔗 Dependencies:
+ * - Vendor\Autoload (via vendor/autoload.php)
+ * - Arcadia\Database\Connection (via database/connection.php)
+ * - Arcadia\Includes\Functions (via includes/functions.php)
+ * - Arcadia\App\Router (via App/router.php)
+ */
+
+// 0. Configure secure session cookies BEFORE starting session
+session_set_cookie_params([
+    'lifetime' => 0,                           // Cookie expires when browser closes
+    'path' => '/',                             // Cookie valid across entire site
+    'secure' => isset($_SERVER['HTTPS']),      // HTTPS only in production
+    'httponly' => true,                        // JavaScript cannot access (prevents XSS)
+    'samesite' => 'Lax'                        // CSRF protection
+]);
+
+// 1. Load required dependencies
+require_once __DIR__ . '/../vendor/autoload.php';      // Composer libraries
+require_once __DIR__ . '/../database/connection.php';  // Database connection
+require_once __DIR__ . '/../includes/functions.php';   // Helper functions
+
+// 2. Extract the path from the requested URL
+$parsedUrl = parse_url($_SERVER['REQUEST_URI']);
+$path = ltrim($parsedUrl['path'] ?? '', '/');
+
+// 3. Serve static files from different locations
+$fullPath = null;
+
+if (strpos($path, 'src/') === 0 || strpos($path, 'node_modules/') === 0) {
+    // Files outside public (src/, node_modules/)
+    $fullPath = __DIR__ . '/../' . $path;
+} elseif (strpos($path, 'public/') === 0) {
+    // Explicit public/ prefix
+    $fullPath = __DIR__ . '/../' . $path;
+} elseif (strpos($path, 'build/') === 0) {
+    // Build assets (inside public/)
+    $fullPath = __DIR__ . '/' . $path;
+}
+
+if ($fullPath && file_exists($fullPath) && is_file($fullPath)) {
+    // Set MIME type
+    $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+    $mimes = [
+        'css' => 'text/css', 'js' => 'application/javascript',
+        'png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif', 'webp' => 'image/webp', 'svg' => 'image/svg+xml',
+        'ttf' => 'font/ttf', 'woff' => 'font/woff', 'woff2' => 'font/woff2',
+        'eot' => 'application/vnd.ms-fontobject'
+    ];
+    
+    if (isset($mimes[$ext])) {
+        header('Content-Type: ' . $mimes[$ext]);
+    }
+    
+    readfile($fullPath);
+    exit;
+}
+
+// 4. Check if the path corresponds to a real file inside public directory
+$publicFilePath = __DIR__ . '/' . $path;
+if (file_exists($publicFilePath) && is_file($publicFilePath)) {
+    readfile($publicFilePath);
+    exit;
+}
+
+// 5. If it's not a file, interpret it as a "nice URL" and parse the segments
+$parts = explode('/', $path);
+
+// 6. Assign URL segments to GET parameters for the router
+$_GET['domain'] = !empty($parts[0]) ? $parts[0] : 'home';
+$_GET['controller'] = !empty($parts[1]) ? $parts[1] : 'pages';
+$_GET['action'] = !empty($parts[2]) ? $parts[2] : 'index';
+
+// 7. Load and execute the main router
+require_once __DIR__ . '/../App/router.php';
+```
+
+## Step-by-Step Breakdown
+
+### Step 0: Session Security Configuration
+
+Before starting any session, the front controller configures secure session cookie parameters:
+
+```php
+session_set_cookie_params([
+    'lifetime' => 0,                       // Session cookie (expires on browser close)
+    'path' => '/',                         // Valid across entire site
+    'secure' => isset($_SERVER['HTTPS']),  // HTTPS only if available
+    'httponly' => true,                    // Prevents JavaScript access
+    'samesite' => 'Lax'                    // CSRF protection
+]);
+```
+
+<Accordion title="Session Cookie Security Explained">
+
+**lifetime = 0**: The session cookie is temporary and expires when the user closes their browser. This prevents long-lived session cookies from being stolen.
+
+**path = '/'**: The cookie is valid across the entire website, not just subdirectories.
+
+**secure = isset($_SERVER['HTTPS'])**: In production with HTTPS, the cookie can only be transmitted over secure connections. This prevents man-in-the-middle attacks.
+
+**httponly = true**: JavaScript cannot access the session cookie via `document.cookie`. This prevents XSS attacks from stealing session tokens.
+
+**samesite = 'Lax'**: The cookie is sent with same-site requests and top-level navigation (like clicking a link). This prevents CSRF attacks while maintaining usability. The alternative 'Strict' would be more secure but would log users out when arriving from external links.
+
+</Accordion>
+
+### Steps 1-2: Dependency Loading & URL Parsing
+
+```php
+// Load dependencies
+require_once __DIR__ . '/../vendor/autoload.php';      // Composer packages
+require_once __DIR__ . '/../database/connection.php';  // Database singleton
+require_once __DIR__ . '/../includes/functions.php';   // Helper functions
+
+// Parse the requested URL
+$parsedUrl = parse_url($_SERVER['REQUEST_URI']);
+$path = ltrim($parsedUrl['path'] ?? '', '/');
+```
+
+This ensures all dependencies are available before processing the request.
+
+### Steps 3-4: Static File Serving
+
+The front controller handles static files (CSS, JS, images, fonts) before routing:
+
+```php
+// Determine full path based on requested path
+if (strpos($path, 'src/') === 0 || strpos($path, 'node_modules/') === 0) {
+    $fullPath = __DIR__ . '/../' . $path;  // Files outside public/
+} elseif (strpos($path, 'public/') === 0) {
+    $fullPath = __DIR__ . '/../' . $path;  // Explicit public/ prefix
+} elseif (strpos($path, 'build/') === 0) {
+    $fullPath = __DIR__ . '/' . $path;     // Compiled assets
+}
+
+if ($fullPath && file_exists($fullPath) && is_file($fullPath)) {
+    // Set appropriate MIME type
+    $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+    $mimes = [
+        'css' => 'text/css',
+        'js' => 'application/javascript',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        // ... more types
+    ];
+    
+    if (isset($mimes[$ext])) {
+        header('Content-Type: ' . $mimes[$ext]);
+    }
+    
+    readfile($fullPath);
+    exit;  // Stop processing
+}
+```
+
+<Warning>
+The front controller serves static files from multiple locations (src/, node_modules/, public/, build/). This is useful during development but should be handled by the web server (Apache/Nginx) in production for better performance.
+</Warning>
+
+### Steps 5-6: URL Parsing and Parameter Extraction
+
+If the request is not for a static file, it's treated as a "clean URL" and parsed:
+
+```php
+// Example URL: /animals/pages/allanimals
+$parts = explode('/', $path);  // ['animals', 'pages', 'allanimals']
+
+// Assign segments to GET parameters with defaults
+$_GET['domain']     = !empty($parts[0]) ? $parts[0] : 'home';      // 'animals'
+$_GET['controller'] = !empty($parts[1]) ? $parts[1] : 'pages';     // 'pages'
+$_GET['action']     = !empty($parts[2]) ? $parts[2] : 'index';     // 'allanimals'
+```
+
+<CodeGroup>
+
+```text Example: Animals Page
+URL: /animals/pages/allanimals
+
+Parsed to:
+  $_GET['domain']     = 'animals'
+  $_GET['controller'] = 'pages'
+  $_GET['action']     = 'allanimals'
+```
+
+```text Example: Home Page
+URL: /
+
+Parsed to:
+  $_GET['domain']     = 'home'
+  $_GET['controller'] = 'pages'
+  $_GET['action']     = 'index'
+```
+
+```text Example: Login
+URL: /auth/pages/login
+
+Parsed to:
+  $_GET['domain']     = 'auth'
+  $_GET['controller'] = 'pages'
+  $_GET['action']     = 'login'
+```
+
+```text Example: Back-office Management
+URL: /animals/gest/create
+
+Parsed to:
+  $_GET['domain']     = 'animals'
+  $_GET['controller'] = 'gest'
+  $_GET['action']     = 'create'
+```
+
+</CodeGroup>
+
+### Step 7: Router Delegation
+
+Finally, the front controller delegates to the central router:
+
+```php
+require_once __DIR__ . '/../App/router.php';
+```
+
+From this point, the [central router](/architecture/routing) takes over and handles authentication, authorization, and domain routing.
+
+## URL Rewriting Configuration
+
+For the front controller pattern to work, the web server must be configured to route all non-file requests to `public/index.php`.
+
+<CodeGroup>
+
+```apache .htaccess (Apache)
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+```
+
+```nginx nginx.conf (Nginx)
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+```
+
+```php PHP Built-in Server
+php -S localhost:3001 -t public public/index.php
+```
+
+</CodeGroup>
+
+## Benefits of This Pattern
+
+1. **Clean URLs**: `/animals/pages/allanimals` instead of messy query strings
+2. **Security**: Single point to enforce security policies before any code runs
+3. **Consistency**: Same initialization for every request
+4. **Flexibility**: Easy to add global middleware (logging, compression, etc.)
+5. **SEO-Friendly**: Search engines prefer clean URL structures
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Central Router" icon="shield-halved" href="/architecture/routing">
+    Learn how authentication and authorization work
+  </Card>
+  <Card title="Domain Structure" icon="folder-tree" href="/architecture/domain-structure">
+    Understand how domains handle requests
+  </Card>
+</CardGroup>

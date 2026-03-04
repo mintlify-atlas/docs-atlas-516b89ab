@@ -1,0 +1,570 @@
+---
+title: Asset Pipeline
+description: Build and compile frontend assets with Gulp for Zoo Arcadia
+---
+
+Learn how to compile SCSS, bundle JavaScript, and optimize assets for Zoo Arcadia using Gulp.
+
+## Overview
+
+Zoo Arcadia uses **Gulp 5** as its build tool to:
+
+- Compile SCSS to CSS
+- Minify and bundle JavaScript
+- Copy vendor libraries (Bootstrap, jQuery, DataTables)
+- Watch files for automatic rebuilds
+- Serve the application with BrowserSync for live reload
+
+## Build Configuration
+
+The build pipeline is configured in `gulpfile.js` and `package.json`.
+
+### File Structure
+
+```
+zoo-arcadia/
+├── gulpfile.js                 # Gulp task definitions
+├── package.json                # Node.js dependencies
+├── src/                        # Source files
+│   ├── scss/
+│   │   ├── app.scss           # Main stylesheet
+│   │   └── bo-sidebar-only.scss  # Backoffice sidebar
+│   └── js/
+│       ├── app.js             # Main JavaScript
+│       ├── animals-filter.js  # Animal filtering
+│       ├── habitat-filter.js  # Habitat filtering
+│       └── rating-testimony.js # Testimonial ratings
+└── public/
+    └── build/                  # Compiled output
+        ├── css/
+        │   ├── app.css        # Compiled main CSS
+        │   ├── bo-sidebar-only.css
+        │   ├── bootstrap.min.css
+        │   ├── normalize.css
+        │   └── dataTables.bootstrap5.min.css
+        └── js/
+            ├── app.js         # Minified app JS
+            ├── animals-filter.js
+            ├── habitat-filter.js
+            ├── rating-testimony.js
+            ├── jquery.min.js
+            ├── bootstrap.bundle.min.js
+            └── dataTables.min.js
+```
+
+## Dependencies
+
+### Development Dependencies
+
+Installed via `npm install --save-dev`:
+
+<Tabs>
+  <Tab title="Gulp Core">
+    ```json package.json
+    {
+      "gulp": "^5.0.1",
+      "gulp-sass": "^6.0.1",
+      "sass": "^1.89.2",
+      "gulp-sourcemaps": "^2.6.5",
+      "gulp-plumber": "^1.2.1"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="JavaScript Processing">
+    ```json package.json
+    {
+      "gulp-concat": "^2.6.1",
+      "gulp-terser-js": "^5.2.2",
+      "terser": "^5.43.1"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Development Server">
+    ```json package.json
+    {
+      "browser-sync": "^3.0.4"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Utilities">
+    ```json package.json
+    {
+      "del": "^8.0.0"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Production Dependencies
+
+UI frameworks and libraries:
+
+```json package.json
+{
+  "dependencies": {
+    "bootstrap": "^5.3.7",
+    "bootstrap-icons": "^1.13.1",
+    "jquery": "^3.7.1",
+    "normalize.css": "^8.0.1",
+    "datatables.net": "^2.3.4",
+    "datatables.net-bs5": "^2.3.4"
+  }
+}
+```
+
+## Gulp Tasks
+
+### Build Tasks
+
+<Tabs>
+  <Tab title="buildCss - Build CSS">
+    Compiles SCSS and copies vendor CSS.
+    
+    ```javascript gulpfile.js
+    const buildCss = series(cleanCss, compileSass, compileBoSidebar, copyVendorCss);
+    ```
+    
+    **Steps**:
+    1. **cleanCss**: Delete `public/build/css/`
+    2. **compileSass**: Compile `src/scss/app.scss` → `public/build/css/app.css`
+    3. **compileBoSidebar**: Compile `src/scss/bo-sidebar-only.scss`
+    4. **copyVendorCss**: Copy Bootstrap, Normalize, DataTables CSS
+    
+    **Run**:
+    ```bash
+    npx gulp buildCss
+    ```
+  </Tab>
+  
+  <Tab title="buildJs - Build JavaScript">
+    Minifies JavaScript and copies vendor libraries.
+    
+    ```javascript gulpfile.js
+    const buildJs = series(cleanJs, processJs, copyVendorJs);
+    ```
+    
+    **Steps**:
+    1. **cleanJs**: Delete `public/build/js/`
+    2. **processJs**: Minify all custom JS files separately
+       - `app.js`
+       - `animals-filter.js`
+       - `habitat-filter.js`
+       - `rating-testimony.js`
+    3. **copyVendorJs**: Copy jQuery, Bootstrap, DataTables
+    
+    **Run**:
+    ```bash
+    npx gulp buildJs
+    ```
+  </Tab>
+  
+  <Tab title="default - Development Mode">
+    Builds assets, starts a dev server, and watches for changes.
+    
+    ```javascript gulpfile.js
+    exports.default = series(buildCss, buildJs, serve, watchAll);
+    ```
+    
+    **Features**:
+    - BrowserSync proxy on `localhost:3001`
+    - Live reload on file changes
+    - Auto-recompiles SCSS and JS
+    
+    **Run**:
+    ```bash
+    npx gulp
+    # or simply:
+    gulp
+    ```
+  </Tab>
+</Tabs>
+
+## File Paths Configuration
+
+Paths are defined at the top of `gulpfile.js`:
+
+```javascript gulpfile.js
+const paths = {
+    scss: 'src/scss/**/*.scss',
+    js: 'src/js/**/*.js',
+    vendorJs: [
+        'node_modules/jquery/dist/jquery.min.js',
+        'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js',
+        'node_modules/datatables.net/js/dataTables.min.js',
+        'node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js'
+    ],
+    vendorCss: [
+        'node_modules/normalize.css/normalize.css',
+        'node_modules/bootstrap/dist/css/bootstrap.min.css',
+        'node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css'
+    ]
+};
+```
+
+## SCSS Compilation
+
+### Main Stylesheet
+
+The `compileSass` task processes `src/scss/app.scss`:
+
+```javascript gulpfile.js
+function compileSass() {
+  return src('src/scss/app.scss')
+    .pipe(plumber())        // Prevent pipe breaking on errors
+    .pipe(sass())           // Compile SCSS to CSS
+    .pipe(dest('public/build/css'))
+    .pipe(browserSync.stream());
+}
+```
+
+**Key Features**:
+- **Plumber**: Prevents build failures on syntax errors
+- **BrowserSync Stream**: Injects CSS changes without full page reload
+
+### Backoffice Sidebar
+
+A separate stylesheet for the admin sidebar:
+
+```javascript gulpfile.js
+function compileBoSidebar() {
+  return src('src/scss/bo-sidebar-only.scss')
+    .pipe(plumber())
+    .pipe(sass())
+    .pipe(dest('public/build/css'))
+    .pipe(browserSync.stream());
+}
+```
+
+### Vendor CSS
+
+Copies third-party CSS files:
+
+```javascript gulpfile.js
+function copyVendorCss() {
+    return src(paths.vendorCss)
+        .pipe(dest('public/build/css'));
+}
+```
+
+## JavaScript Processing
+
+### Custom JavaScript
+
+Each custom JS file is processed separately with sourcemaps and minification:
+
+```javascript gulpfile.js
+function processJs() {
+    // Main app.js
+    const appJs = src(['src/js/app.js'])
+        .pipe(sourcemaps.init())
+        .pipe(terser())  // Minify
+        .pipe(sourcemaps.write('.'))
+        .pipe(dest('public/build/js'));
+    
+    // Animals filter
+    const animalsFilterJs = src('src/js/animals-filter.js')
+        .pipe(sourcemaps.init())
+        .pipe(terser())
+        .pipe(sourcemaps.write('.'))
+        .pipe(dest('public/build/js'));
+    
+    // ... similar for habitat-filter.js and rating-testimony.js
+    
+    return require('merge-stream')(appJs, animalsFilterJs, habitatFilterJs, ratingTestimonyJs);
+}
+```
+
+**Why Separate Files?**
+- Allows loading only needed JavaScript per page
+- Reduces initial page load time
+- Easier debugging with sourcemaps
+
+### Vendor JavaScript
+
+Copies pre-minified vendor libraries:
+
+```javascript gulpfile.js
+function copyVendorJs() {
+    return src(paths.vendorJs)
+        .pipe(dest('public/build/js'));
+}
+```
+
+## Development Workflow
+
+### Watch Mode
+
+The `watchAll` function monitors files for changes:
+
+```javascript gulpfile.js
+function watchAll() {
+  // Watch SCSS files
+  watch(paths.scss, buildCss);
+  
+  // Watch JS files
+  watch(paths.js, series(buildJs, reload));
+  
+  // Watch PHP files (Frontend and Backend)
+  watch('public/**/*.php', reload);
+  watch('App/**/*.php', reload);
+  watch('includes/**/*.php', reload);
+}
+```
+
+### BrowserSync Server
+
+Starts a development server with live reload:
+
+```javascript gulpfile.js
+let currentProxy = 'http://localhost:3001'; // PHP server
+
+function serve(done) {
+  browserSync.init({
+    proxy: currentProxy,
+    open: true,
+    notify: true
+  });
+  done();
+}
+```
+
+**Setup Requirements**:
+1. Start PHP server on port 3001:
+   ```bash
+   php -S localhost:3001 -t public
+   ```
+
+2. Run Gulp in another terminal:
+   ```bash
+   npx gulp
+   ```
+
+3. BrowserSync opens at `http://localhost:3000` (proxies to 3001)
+
+## Build Commands
+
+<Steps>
+  <Step title="Install Dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Build Everything">
+    Build CSS and JavaScript for production:
+    
+    ```bash
+    npx gulp buildCss
+    npx gulp buildJs
+    ```
+    
+    Or use the npm script:
+    
+    ```bash
+    npm run css
+    ```
+  </Step>
+
+  <Step title="Development Mode">
+    Start the dev server with watch mode:
+    
+    ```bash
+    npx gulp
+    ```
+    
+    This will:
+    - Build all assets
+    - Start BrowserSync on `localhost:3000`
+    - Watch for file changes
+    - Auto-reload browser on changes
+  </Step>
+</Steps>
+
+## Production Build
+
+For production deployments:
+
+<Steps>
+  <Step title="Clean Install">
+    ```bash
+    rm -rf node_modules public/build
+    npm ci --production=false
+    ```
+  </Step>
+  
+  <Step title="Build Assets">
+    ```bash
+    npx gulp buildCss
+    npx gulp buildJs
+    ```
+  </Step>
+  
+  <Step title="Verify Output">
+    Check that files exist:
+    
+    ```bash
+    ls -la public/build/css/
+    ls -la public/build/js/
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The Dockerfile automatically runs these commands during the Docker build process.
+</Note>
+
+## Cleaning Output
+
+Clean tasks remove compiled files:
+
+```javascript gulpfile.js
+function cleanCss() {
+  return deleteAsync('./public/build/css');
+}
+
+function cleanJs() {
+  return deleteAsync('./public/build/js');
+}
+```
+
+**Manual Cleanup**:
+```bash
+rm -rf public/build/css public/build/js
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="SCSS Compilation Fails">
+    **Symptoms**: Syntax errors or missing imports
+    
+    **Solutions**:
+    - Check SCSS syntax in `src/scss/app.scss`
+    - Ensure `sass` package is installed: `npm install sass`
+    - Look for typos in `@import` statements
+    - Run with verbose output: `npx gulp buildCss --verbose`
+  </Accordion>
+  
+  <Accordion title="JavaScript Minification Errors">
+    **Symptoms**: Terser fails with syntax errors
+    
+    **Solutions**:
+    - Check JavaScript syntax in `src/js/*.js`
+    - Ensure ES6+ features are supported by your browser target
+    - Temporarily disable minification to debug:
+      ```javascript
+      // Comment out terser()
+      .pipe(sourcemaps.init())
+      // .pipe(terser())
+      .pipe(sourcemaps.write('.'))
+      ```
+  </Accordion>
+  
+  <Accordion title="BrowserSync Not Working">
+    **Symptoms**: Changes don't trigger reload
+    
+    **Solutions**:
+    - Ensure PHP server is running on port 3001
+    - Check proxy URL in `gulpfile.js` matches your PHP server
+    - Restart Gulp: `Ctrl+C` then `npx gulp`
+    - Clear browser cache
+  </Accordion>
+  
+  <Accordion title="Vendor Files Missing">
+    **Symptoms**: Bootstrap or jQuery not loaded
+    
+    **Solutions**:
+    - Run `npm install` to download vendor libraries
+    - Check paths in `gulpfile.js` match `node_modules/` structure
+    - Manually run: `npx gulp copyVendorCss` and `npx gulp copyVendorJs`
+  </Accordion>
+  
+  <Accordion title="Node.js Version Issues">
+    **Symptoms**: Gulp fails to start or throws errors
+    
+    **Solutions**:
+    - Ensure Node.js 18 or higher: `node --version`
+    - Update npm: `npm install -g npm@latest`
+    - Clear npm cache: `npm cache clean --force`
+    - Delete and reinstall: `rm -rf node_modules && npm install`
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Configuration
+
+### Custom SCSS Variables
+
+Create `src/scss/_variables.scss` for custom theming:
+
+```scss
+// Override Bootstrap variables
+$primary: #2c5f2d;
+$secondary: #97bc62;
+$font-family-base: 'Inter', sans-serif;
+
+// Import Bootstrap
+@import '~bootstrap/scss/bootstrap';
+```
+
+### Adding New JavaScript Files
+
+To add a new JS file:
+
+1. Create `src/js/my-feature.js`
+2. Add to `processJs()` in `gulpfile.js`:
+
+```javascript gulpfile.js
+const myFeatureJs = src('src/js/my-feature.js')
+    .pipe(sourcemaps.init())
+    .pipe(terser())
+    .pipe(sourcemaps.write('.'))
+    .pipe(dest('public/build/js'));
+
+return require('merge-stream')(appJs, animalsFilterJs, myFeatureJs, ...);
+```
+
+3. Include in your HTML:
+
+```html
+<script src="/build/js/my-feature.js"></script>
+```
+
+### PostCSS and Autoprefixer
+
+For browser prefixes, add PostCSS:
+
+```bash
+npm install --save-dev gulp-postcss autoprefixer
+```
+
+```javascript gulpfile.js
+const postcss = require('gulp-postcss');
+const autoprefixer = require('autoprefixer');
+
+function compileSass() {
+  return src('src/scss/app.scss')
+    .pipe(sass())
+    .pipe(postcss([autoprefixer()]))  // Add vendor prefixes
+    .pipe(dest('public/build/css'));
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Setup" icon="gear" href="/development/environment-setup">
+    Set up your development environment
+  </Card>
+  <Card title="Architecture Overview" icon="sitemap" href="/architecture/overview">
+    Learn about the application architecture
+  </Card>
+  <Card title="Docker Deployment" icon="docker" href="/development/docker-deployment">
+    Build assets in Docker
+  </Card>
+  <Card title="Database Schema" icon="database" href="/development/database-schema">
+    Explore the database structure
+  </Card>
+</CardGroup>

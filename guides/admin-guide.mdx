@@ -1,0 +1,405 @@
+---
+title: Administrator Guide
+description: Complete guide for administrators managing Zoo Arcadia's system, including user management, animal data, habitats, and system configuration.
+---
+
+## Overview
+
+As an administrator, you have full access to Zoo Arcadia's management system. This guide covers all administrative tasks, from managing users and employees to configuring animals, habitats, services, and schedules.
+
+## Dashboard Overview
+
+The admin dashboard (`/home/pages/start`) provides a centralized view of recent activity across all system modules:
+
+- Recent users and employees created
+- Latest animal records and feeding logs
+- Recent health reports from veterinarians
+- New testimonials pending moderation
+- Contact form submissions
+- Service updates and content changes
+
+<Tip>
+  The dashboard shows only the modules you have permission to access. Use it as your starting point each day to monitor system activity.
+</Tip>
+
+## User Management
+
+### Creating a New User
+
+<Steps>
+  <Step title="Navigate to Users">
+    Go to `/users/gest/start` to view all system users.
+  </Step>
+  
+  <Step title="Click Create User">
+    Access the creation form at `/users/gest/create`.
+  </Step>
+  
+  <Step title="Fill in User Details">
+    - **Username**: Unique identifier (can be an email address)
+    - **Password**: Initial password (deliver to user in person for security)
+    - **Role**: Select from Admin, Employee, or Veterinarian
+    - **Employee Association**: Optionally link to an existing employee record
+  </Step>
+  
+  <Step title="Submit and Email Notification">
+    Upon creation, the system automatically sends an email to:
+    - The employee's email (if associated with an employee)
+    - The username (if it's a valid email address)
+    
+    The email contains the username and role but NOT the password.
+  </Step>
+</Steps>
+
+<Note>
+  If a username already exists, you'll receive an error. Choose a different username or check if the user already has an account.
+</Note>
+
+### Editing User Accounts
+
+Navigate to `/users/gest/edit?id={user_id}` to modify:
+
+- Username
+- Password (leave blank to keep current password)
+- Assigned role
+- Employee association
+- **VIP Permissions**: Grant specific permissions beyond the user's role
+
+<Tip>
+  VIP permissions allow you to give users granular access without changing their role. For example, grant an Employee user the ability to create animals without making them an Admin.
+</Tip>
+
+### Managing User Status
+
+You can activate or deactivate users without deleting them:
+
+- **Deactivate**: User cannot log in but data remains in the system
+- **Delete**: Permanently removes user (use with caution)
+
+Access these options from `/users/gest/start`.
+
+### Assigning Accounts to Employees
+
+If an employee doesn't have a user account:
+
+1. Create an unassigned user account first
+2. Navigate to the employee record
+3. Use "Assign Account" to link an existing user
+4. An email notification is automatically sent
+
+## Employee Management
+
+### Creating Employee Records
+
+Navigate to `/employees/gest/create` and provide:
+
+- **Personal Information**: First name, last name, birthdate
+- **Contact Details**: Phone, email, address, city, zip code, country
+- **Additional Info**: Gender, marital status
+
+<Note>
+  Employee records store human resources data. A separate user account is needed for system access.
+</Note>
+
+### Editing Employee Information
+
+Update employee details at `/employees/gest/edit?id={employee_id}`. All fields can be modified to keep records current.
+
+### Deleting Employees
+
+Before deleting an employee:
+
+1. Check if they have an associated user account
+2. Unlink or delete the user account first
+3. Then delete the employee record
+
+## Role and Permission Management
+
+### Understanding Roles
+
+Zoo Arcadia has three primary roles:
+
+- **Admin**: Full system access
+- **Employee**: Animal feeding, testimonial moderation, service updates
+- **Veterinarian**: Health report creation and management
+
+### Configuring Permissions
+
+Administrators can:
+
+1. View all permissions at `/permissions/gest/start`
+2. Assign permissions to roles
+3. Grant VIP (individual) permissions to specific users
+
+<Tip>
+  Permission names follow the pattern `{module}-{action}`, such as `animals-create`, `users-edit`, or `vet_reports-view`.
+</Tip>
+
+## Animal CRUD Operations
+
+### Creating Animals
+
+<Steps>
+  <Step title="Access Animal Management">
+    Navigate to `/animals/gest/start` to view all animals.
+  </Step>
+  
+  <Step title="Start Creation">
+    Click "Create Animal" to access `/animals/gest/create`.
+  </Step>
+  
+  <Step title="Enter Animal Data">
+    - **Name**: Animal's name
+    - **Category**: e.g., Mammal, Bird, Reptile
+    - **Species**: Specific species (linked to category)
+    - **Gender**: Male or Female
+    - **Habitat**: Assign to a habitat
+    - **Nutrition Plan**: Select food type and quantity
+  </Step>
+  
+  <Step title="Upload Images">
+    Provide responsive images for different devices:
+    - Mobile image (required)
+    - Tablet image (optional)
+    - Desktop image (optional)
+    
+    Images are uploaded to Cloudinary automatically.
+  </Step>
+  
+  <Step title="Save">
+    Submit the form to create the animal record.
+  </Step>
+</Steps>
+
+### Managing Categories and Species
+
+From `/animals/gest/start`, you can:
+
+- **Create/Edit Categories**: Animal classification (mammals, birds, etc.)
+- **Create/Edit Species**: Specific species within each category
+- **Delete**: Remove unused categories or species
+
+<Note>
+  You cannot delete a category or species that is assigned to existing animals.
+</Note>
+
+### Creating Nutrition Plans
+
+Nutrition plans define feeding requirements:
+
+1. **Nutrition Type**: Herbivore, Carnivore, Omnivore
+2. **Food Type**: Meat, Fruit, Legumes, Insect
+3. **Quantity**: Daily food amount in grams
+
+Assign nutrition plans when creating or editing animals.
+
+### Editing Animals
+
+Navigate to `/animals/gest/edit?id={animal_id}` to update:
+
+- Basic information (name, species, gender)
+- Habitat assignment
+- Nutrition plan
+- Images (upload new ones to replace existing)
+
+### Deleting Animals
+
+Deletion removes:
+
+- Animal record
+- Associated images from Cloudinary
+- Media links
+
+<Warning>
+  Animal deletion is permanent. Health reports and feeding logs referencing this animal may be affected.
+</Warning>
+
+## Habitat CRUD Operations
+
+### Creating Habitats
+
+<Steps>
+  <Step title="Navigate to Habitats">
+    Go to `/habitats/gest/start` to view all habitats.
+  </Step>
+  
+  <Step title="Create New Habitat">
+    Access `/habitats/gest/create` and provide:
+    - Habitat name
+    - Description
+    - Responsive images (mobile, tablet, desktop)
+  </Step>
+  
+  <Step title="Optional: Add Hero Section">
+    Configure a hero banner for the habitat's public page:
+    - Hero title
+    - Hero subtitle
+    - Hero images (separate from habitat images)
+  </Step>
+  
+  <Step title="Save">
+    Submit to create the habitat.
+  </Step>
+</Steps>
+
+### Editing Habitats
+
+Update habitat details at `/habitats/gest/edit?id={habitat_id}`:
+
+- Name and description
+- Images
+- Hero section (if configured)
+
+### Viewing Habitat Statistics
+
+The habitat list shows:
+
+- Number of animals in each habitat
+- Recent habitat suggestions from veterinarians
+- Last updated timestamp
+
+### Deleting Habitats
+
+<Warning>
+  Before deleting a habitat, reassign all animals to different habitats. The system may prevent deletion if animals are still assigned.
+</Warning>
+
+## Service Management
+
+Services are featured offerings displayed on the public website.
+
+### Creating Services
+
+Navigate to `/cms/gest/create`:
+
+1. **Service Title**: Name of the service
+2. **Description**: Detailed information
+3. **Link**: Optional URL for more information
+4. **Type**: Service category
+5. **Images**: Upload responsive images
+
+### Editing Services
+
+Update service information at `/cms/gest/edit?id={service_id}`. All changes are logged with your user ID and timestamp.
+
+### Service Visibility
+
+Services can be:
+
+- **Featured**: Displayed prominently on the homepage
+- **Regular**: Listed on the services page
+
+Configure this in the service editor.
+
+## Schedule Management
+
+### Editing Opening Hours
+
+Zoo Arcadia's opening hours are managed at `/schedules/gest/start`.
+
+<Steps>
+  <Step title="View Current Schedules">
+    See all time slots (e.g., Monday-Friday, Saturday-Sunday).
+  </Step>
+  
+  <Step title="Edit Time Slot">
+    Click edit for a specific slot to access `/schedules/gest/edit?id={schedule_id}`.
+  </Step>
+  
+  <Step title="Update Times">
+    - Opening time (e.g., 09:00)
+    - Closing time (e.g., 18:00)
+    - Status: Open or Closed
+  </Step>
+  
+  <Step title="Save Changes">
+    Updated hours appear immediately on the public website.
+  </Step>
+</Steps>
+
+<Tip>
+  Use the "Closed" status for special closure days without deleting the schedule record.
+</Tip>
+
+## System Configuration
+
+### Content Management
+
+Administrators can manage site-wide content:
+
+- **Hero Sections**: Large banner images for different pages
+- **Content Bricks**: Reusable content blocks ("About Us", etc.)
+- **Page Headers**: Configure page-specific headers
+
+Access these at `/cms/gest/start`.
+
+### Viewing System Logs
+
+Service modification logs are available at `/cms/gest/logs`, showing:
+
+- Who made changes
+- When changes occurred
+- What was modified
+
+### Managing Testimonials
+
+See the [Employee Guide](/guides/employee-guide) for testimonial moderation, which administrators can also perform.
+
+### Viewing Contact Submissions
+
+Public contact form submissions are viewable by administrators. Check them regularly to respond to visitor inquiries.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Regular Backups" icon="database">
+    While not directly managed through the UI, ensure database backups are scheduled and tested regularly.
+  </Card>
+  
+  <Card title="Permission Audits" icon="shield">
+    Periodically review user permissions to ensure employees have appropriate access levels.
+  </Card>
+  
+  <Card title="Content Updates" icon="refresh">
+    Keep animal information, services, and schedules current to provide accurate information to visitors.
+  </Card>
+  
+  <Card title="Monitor Activity" icon="chart-line">
+    Use the dashboard daily to track system activity and identify issues early.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Email Notifications Not Sending
+
+If user creation emails fail:
+
+- Verify the employee has a valid email address
+- Check email server configuration
+- Review error logs for specific issues
+
+### Permission Errors
+
+If users can't access features they should:
+
+1. Check their role's permissions
+2. Verify VIP permissions aren't conflicting
+3. Ensure the user account is active
+
+### Image Upload Failures
+
+If Cloudinary uploads fail:
+
+- Verify Cloudinary API credentials
+- Check file size limits (max 10MB recommended)
+- Ensure supported formats (JPEG, PNG, WebP)
+
+## Security Reminders
+
+<Warning>
+  - Never share admin credentials
+  - Deliver user passwords in person, never via email
+  - Deactivate accounts for departed employees immediately
+  - Use strong passwords for all accounts
+</Warning>

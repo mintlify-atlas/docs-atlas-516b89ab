@@ -1,0 +1,773 @@
+---
+title: Installation Guide
+description: Detailed installation instructions for Zoo Arcadia with Docker and local development environments
+---
+
+This comprehensive guide covers everything you need to install and configure Zoo Arcadia on your system.
+
+## System Requirements
+
+### Required Software
+
+<CardGroup cols={2}>
+  <Card title="PHP" icon="code">
+    Version 7.4 or higher (8.x recommended)
+  </Card>
+  <Card title="Composer" icon="box">
+    Latest stable version for dependency management
+  </Card>
+  <Card title="Node.js" icon="node-js">
+    Version 14+ with npm included
+  </Card>
+  <Card title="Database" icon="database">
+    MySQL 8.0+ or MariaDB 11.4+
+  </Card>
+</CardGroup>
+
+### Optional Software
+
+- **Docker Desktop** - For containerized deployment (recommended)
+- **Git** - For version control and cloning the repository
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Docker Installation">
+    Docker provides a consistent, isolated environment for Zoo Arcadia.
+
+    ### Prerequisites
+
+    <Steps>
+      <Step title="Install Docker Desktop">
+        Download and install Docker Desktop for your operating system:
+        - [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
+        - [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop)
+        - [Docker Engine for Linux](https://docs.docker.com/engine/install/)
+      </Step>
+
+      <Step title="Verify Docker installation">
+        ```bash
+        docker --version
+        docker-compose --version
+        ```
+      </Step>
+    </Steps>
+
+    ### Setup Process
+
+    <Steps>
+      <Step title="Clone the repository">
+        ```bash
+        git clone https://github.com/dumitrusf/zoo-Arcadia.git
+        cd zoo-ARCADIA
+        ```
+      </Step>
+
+      <Step title="Configure environment">
+        Run the Docker configuration script:
+        ```bash
+        .\switch-to-docker.bat
+        ```
+
+        This creates/updates your `.env` file with Docker-specific settings:
+        ```ini
+        DB_HOST=db
+        DB_NAME=zoo_arcadia
+        DB_USER=zoo_user
+        DB_PASS=zoo_password
+        ```
+      </Step>
+
+      <Step title="Review Docker Compose configuration">
+        The `docker-compose.yml` defines three services:
+
+        **Web Service** (PHP + Apache)
+        - Exposes port 8080
+        - Mounts source directories for development
+        - Automatically installs dependencies
+
+        **Database Service** (MariaDB 11.4)
+        - Exposes port 3306
+        - Persistent volume for data storage
+        - Auto-initializes with SQL scripts from `database/` directory
+      </Step>
+
+      <Step title="Build and start containers">
+        ```bash
+        docker-compose up -d --build
+        ```
+
+        <Info>
+          The `--build` flag ensures all dependencies are installed and assets are compiled. This may take a few minutes on first run.
+        </Info>
+      </Step>
+
+      <Step title="Verify containers are running">
+        ```bash
+        docker-compose ps
+        ```
+
+        You should see:
+        - `zoo-arcadia-web` - Status: Up
+        - `zoo-arcadia-db` - Status: Up
+      </Step>
+
+      <Step title="Check application logs">
+        ```bash
+        docker-compose logs -f web
+        ```
+        Press `Ctrl+C` to exit log view.
+      </Step>
+    </Steps>
+
+    ### Docker Container Management
+
+    <CodeGroup>
+      ```bash View running containers
+      docker-compose ps
+      ```
+
+      ```bash Stop containers
+      docker-compose down
+      ```
+
+      ```bash Restart containers
+      docker-compose restart
+      ```
+
+      ```bash View logs
+      docker-compose logs -f [service-name]
+      ```
+
+      ```bash Execute commands in container
+      docker exec -it zoo-arcadia-web bash
+      ```
+    </CodeGroup>
+
+    ### Database Management (Docker)
+
+    <CodeGroup>
+      ```bash Complete database reset
+      docker-compose down -v && docker-compose up -d
+      ```
+
+      ```bash Apply specific SQL file
+      docker exec -i zoo-arcadia-db mariadb -uzoo_user -pzoo_password zoo_arcadia < database/03_constraints.sql
+      ```
+
+      ```bash Access database shell
+      docker exec -it zoo-arcadia-db mariadb -uzoo_user -pzoo_password zoo_arcadia
+      ```
+
+      ```bash Backup database
+      docker exec zoo-arcadia-db mariadb-dump -uzoo_user -pzoo_password zoo_arcadia > backup.sql
+      ```
+    </CodeGroup>
+
+    ### Updating Code in Docker
+
+    When you modify `composer.json`, `package.json`, or source files:
+
+    ```bash
+    docker-compose up -d --build
+    ```
+
+    <Note>
+      Docker volumes automatically sync changes to PHP files, so you don't need to rebuild for simple code changes. Only rebuild when dependencies change.
+    </Note>
+
+  </Tab>
+
+  <Tab title="Local Installation">
+    Install Zoo Arcadia directly on your local machine.
+
+    ### Prerequisites Installation
+
+    <Steps>
+      <Step title="Install PHP">
+        **Windows:**
+        - Download from [php.net](https://windows.php.net/download/)
+        - Or use XAMPP/WAMP which includes PHP, MySQL, and Apache
+
+        **macOS:**
+        ```bash
+        brew install php@8.1
+        ```
+
+        **Linux (Ubuntu/Debian):**
+        ```bash
+        sudo apt update
+        sudo apt install php php-mysql php-mbstring php-xml php-curl
+        ```
+
+        Verify installation:
+        ```bash
+        php --version
+        ```
+      </Step>
+
+      <Step title="Install Composer">
+        Download from [getcomposer.org](https://getcomposer.org/download/)
+
+        Verify installation:
+        ```bash
+        composer --version
+        ```
+      </Step>
+
+      <Step title="Install Node.js and npm">
+        Download from [nodejs.org](https://nodejs.org/) (LTS version recommended)
+
+        Verify installation:
+        ```bash
+        node --version
+        npm --version
+        ```
+      </Step>
+
+      <Step title="Install MySQL/MariaDB">
+        **Windows:**
+        - [MariaDB Download](https://mariadb.org/download/)
+        - Or use XAMPP/WAMP
+
+        **macOS:**
+        ```bash
+        brew install mariadb
+        brew services start mariadb
+        ```
+
+        **Linux:**
+        ```bash
+        sudo apt install mariadb-server
+        sudo systemctl start mariadb
+        ```
+
+        Verify installation:
+        ```bash
+        mysql --version
+        ```
+      </Step>
+    </Steps>
+
+    ### Application Setup
+
+    <Steps>
+      <Step title="Clone the repository">
+        ```bash
+        git clone https://github.com/dumitrusf/zoo-Arcadia.git
+        cd zoo-ARCADIA
+        ```
+      </Step>
+
+      <Step title="Install PHP dependencies">
+        ```bash
+        composer install
+        ```
+
+        This installs:
+        - `intervention/image` - Image manipulation
+        - `phpmailer/phpmailer` - Email functionality
+        - `cloudinary/cloudinary_php` - Cloud image storage
+        - `vlucas/phpdotenv` - Environment variable management
+      </Step>
+
+      <Step title="Install Node.js dependencies">
+        ```bash
+        npm install
+        ```
+
+        This installs:
+        - Bootstrap 5.3.7
+        - jQuery 3.7.1
+        - DataTables
+        - Gulp build tools
+      </Step>
+
+      <Step title="Configure environment variables">
+        Run the local configuration script:
+        ```bash
+        .\switch-to-local.bat
+        ```
+
+        Or manually create `.env` from `.env.example`:
+        ```bash
+        cp .env.example .env
+        ```
+
+        Edit `.env` with your local settings:
+        ```ini
+        # Database Configuration
+        DB_HOST=localhost
+        DB_NAME=zoo_arcadia
+        DB_USER=root
+        DB_PASS=root
+
+        # Email Configuration (SMTP)
+        SMTP_HOST=smtp.gmail.com
+        SMTP_PORT=587
+        SMTP_SECURE=tls
+        SMTP_USER=your-email@gmail.com
+        SMTP_PASS=your-app-password
+        SMTP_FROM_EMAIL=noreply@arcadia-zoo.com
+        SMTP_FROM_NAME=Arcadia Zoo
+
+        # Zoo contact email
+        ZOO_EMAIL=contact@arcadia-zoo.com
+
+        # Environment
+        APP_ENV=development
+
+        # Cloudinary (Optional)
+        CLOUDINARY_CLOUD_NAME=your-cloud-name
+        CLOUDINARY_API_KEY=your-api-key
+        CLOUDINARY_API_SECRET=your-api-secret
+        ```
+      </Step>
+
+      <Step title="Deploy the database">
+        **Windows:**
+        ```bash
+        .\deploy_database.bat
+        ```
+
+        **Linux/macOS:**
+        ```bash
+        chmod +x deploy.sh
+        ./deploy.sh
+        ```
+
+        <Warning>
+          The deployment script recreates the entire database. All existing data will be lost.
+        </Warning>
+
+        The script executes SQL files in order:
+        1. `01_init.sql` - Database initialization
+        2. `02_tables.sql` - Table creation
+        3. `03_constraints.sql` - Foreign keys and constraints
+        4. `04_indexes.sql` - Performance indexes (if exists)
+        5. `05_procedures.sql` - Stored procedures (if exists)
+        6. `06_seed_data.sql` - Initial data (roles, users, animals, etc.)
+        7. `07_cleanup.sql` - Cleanup unused tables (if exists)
+      </Step>
+
+      <Step title="Compile assets">
+        Build CSS from SCSS and minify JavaScript:
+        ```bash
+        npx gulp buildCss && npx gulp buildJs
+        ```
+
+        Assets are compiled to `public/build/`:
+        - `public/build/css/` - Compiled CSS files
+        - `public/build/js/` - Compiled and minified JS files
+      </Step>
+
+      <Step title="Start the development server">
+        Using PHP's built-in server:
+        ```bash
+        php -S localhost:3001 -t public public/index.php
+        ```
+
+        Or use Apache/Nginx with document root pointing to `public/`
+      </Step>
+    </Steps>
+
+    ### Development Workflow
+
+    For active development with automatic recompilation:
+
+    ```bash
+    npx gulp
+    ```
+
+    This starts:
+    - SCSS/JS file watchers
+    - BrowserSync for live reload
+    - Automatic compilation on file changes
+
+    <Info>
+      BrowserSync proxies `http://localhost:3001` and opens a new browser window with live reload enabled.
+    </Info>
+
+  </Tab>
+</Tabs>
+
+## Environment Configuration
+
+### Database Configuration
+
+The `.env` file controls all database connections:
+
+<CodeGroup>
+  ```ini Docker
+  DB_HOST=db
+  DB_NAME=zoo_arcadia
+  DB_USER=zoo_user
+  DB_PASS=zoo_password
+  ```
+
+  ```ini Local
+  DB_HOST=localhost
+  DB_NAME=zoo_arcadia
+  DB_USER=root
+  DB_PASS=root
+  ```
+
+  ```ini Production
+  DB_HOST=your-production-host
+  DB_NAME=zoo_arcadia
+  DB_USER=your-production-user
+  DB_PASS=your-secure-password
+  ```
+</CodeGroup>
+
+### Email Configuration
+
+Configure SMTP for contact form and notifications:
+
+```ini
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=tls
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM_EMAIL=noreply@arcadia-zoo.com
+SMTP_FROM_NAME=Arcadia Zoo
+ZOO_EMAIL=contact@arcadia-zoo.com
+```
+
+<Note>
+  For Gmail, you need to create an [App Password](https://support.google.com/accounts/answer/185833) instead of using your regular password.
+</Note>
+
+### Cloudinary Configuration (Optional)
+
+For cloud-based image storage:
+
+```ini
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+## Database Setup
+
+### Database Schema
+
+Zoo Arcadia uses a modular SQL structure:
+
+- **01_init.sql** - Creates database and sets character encoding
+- **02_tables.sql** - Defines all tables (users, animals, habitats, services, etc.)
+- **03_constraints.sql** - Foreign key relationships and constraints
+- **04_indexes.sql** - Performance optimization indexes
+- **05_procedures.sql** - Stored procedures for complex operations
+- **06_seed_data.sql** - Initial data for development/testing
+- **07_cleanup.sql** - Removes deprecated tables
+
+### Manual Database Deployment
+
+If automated scripts don't work, execute SQL files manually:
+
+```bash
+mysql -u root -p < database/01_init.sql
+mysql -u root -p zoo_arcadia < database/02_tables.sql
+mysql -u root -p zoo_arcadia < database/03_constraints.sql
+mysql -u root -p zoo_arcadia < database/06_seed_data.sql
+```
+
+### Seed Data
+
+The `06_seed_data.sql` file includes:
+
+- **Roles**: Admin, Veterinary, Employee, Accountant
+- **Employees**: Sample employee records
+- **Users**: Login credentials for each role
+- **Animals**: Sample zoo animals with details
+- **Habitats**: Savanna, Jungle, Marsh environments
+- **Services**: Restaurant, guided tours, train ride
+
+<Warning>
+  Review `database/06_seed_data.sql` for default credentials before deploying to production.
+</Warning>
+
+## Asset Compilation
+
+### Build Commands
+
+<CodeGroup>
+  ```bash Production build
+  npx gulp buildCss && npx gulp buildJs
+  ```
+
+  ```bash Development with watch
+  npx gulp
+  ```
+
+  ```bash CSS only
+  npx gulp buildCss
+  ```
+
+  ```bash JavaScript only
+  npx gulp buildJs
+  ```
+</CodeGroup>
+
+### Asset Pipeline
+
+The Gulp configuration (`gulpfile.js`) handles:
+
+**CSS Processing:**
+- Compiles `src/scss/app.scss` → `public/build/css/app.css`
+- Compiles `src/scss/bo-sidebar-only.scss` for back-office
+- Copies vendor CSS (Bootstrap, DataTables, Normalize.css)
+
+**JavaScript Processing:**
+- Minifies `src/js/app.js` with Terser
+- Compiles individual filter scripts:
+  - `animals-filter.js`
+  - `habitat-filter.js`
+  - `rating-testimony.js`
+- Generates source maps for debugging
+- Copies vendor JS (jQuery, Bootstrap, DataTables)
+
+**Development Features:**
+- BrowserSync for live reload
+- File watching for automatic recompilation
+- Proxy to `http://localhost:3001`
+
+## Verification Steps
+
+<Steps>
+  <Step title="Check PHP configuration">
+    ```bash
+    php --ini
+    ```
+    Verify extensions are loaded: `mysqli`, `pdo_mysql`, `mbstring`, `curl`, `gd`
+  </Step>
+
+  <Step title="Test database connection">
+    ```bash
+    mysql -u root -p -e "SHOW DATABASES;"
+    ```
+    Verify `zoo_arcadia` database exists
+  </Step>
+
+  <Step title="Verify assets compiled">
+    Check that `public/build/` contains:
+    - `css/app.css`
+    - `css/bo-sidebar-only.css`
+    - `css/bootstrap.min.css`
+    - `js/app.js`
+    - `js/jquery.min.js`
+  </Step>
+
+  <Step title="Access the application">
+    **Docker:** `http://localhost:8080`
+    
+    **Local:** `http://localhost:3001`
+
+    You should see the Zoo Arcadia homepage.
+  </Step>
+
+  <Step title="Test back-office access">
+    Navigate to `/home/pages/login-personnel` and attempt to log in with credentials from `06_seed_data.sql`.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### SSL Certificate Error (Windows)
+
+If `composer install` fails with `curl error 60: SSL certificate problem`:
+
+<Steps>
+  <Step title="Download cacert.pem">
+    Download from [curl.se/ca/cacert.pem](https://curl.se/ca/cacert.pem)
+    
+    Save to a permanent location, e.g., `C:\php\cacert.pem`
+  </Step>
+
+  <Step title="Locate php.ini">
+    ```bash
+    php --ini
+    ```
+    Note the "Loaded Configuration File" path
+  </Step>
+
+  <Step title="Update php.ini">
+    Add or update these lines:
+    ```ini
+    [curl]
+    curl.cainfo = "C:\php\cacert.pem"
+
+    [openssl]
+    openssl.cafile = "C:\php\cacert.pem"
+    ```
+  </Step>
+
+  <Step title="Restart services">
+    - Close and reopen your terminal
+    - Restart Apache if using XAMPP/WAMP
+    - Retry `composer install`
+  </Step>
+</Steps>
+
+### Port Conflicts
+
+**Port 8080 (Docker) already in use:**
+```yaml
+# Edit docker-compose.yml
+web:
+  ports:
+    - "8081:80"  # Change external port
+```
+
+**Port 3001 (Local) already in use:**
+```bash
+php -S localhost:3002 -t public public/index.php
+```
+
+### Database Connection Issues
+
+<AccordionGroup>
+  <Accordion title="Access denied for user">
+    Verify credentials in `.env` match your MySQL/MariaDB setup:
+    ```bash
+    mysql -u root -p
+    ```
+    If you can't connect, reset the root password or create a new user.
+  </Accordion>
+
+  <Accordion title="Database does not exist">
+    Run the database deployment script:
+    ```bash
+    .\deploy_database.bat  # Windows
+    ./deploy.sh            # Linux/macOS
+    ```
+  </Accordion>
+
+  <Accordion title="Can't connect to MySQL server">
+    Ensure MySQL/MariaDB service is running:
+    ```bash
+    # Windows (XAMPP)
+    # Start via XAMPP Control Panel
+
+    # macOS
+    brew services start mariadb
+
+    # Linux
+    sudo systemctl start mariadb
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Asset Compilation Errors
+
+<AccordionGroup>
+  <Accordion title="gulp: command not found">
+    Install Gulp globally or use npx:
+    ```bash
+    npm install -g gulp-cli
+    # OR
+    npx gulp
+    ```
+  </Accordion>
+
+  <Accordion title="Node Sass binding error">
+    Rebuild node-sass:
+    ```bash
+    npm rebuild node-sass
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied errors">
+    **Windows:** Run terminal as Administrator
+    
+    **macOS/Linux:**
+    ```bash
+    sudo npm install -g gulp-cli
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Docker-Specific Issues
+
+<AccordionGroup>
+  <Accordion title="Container won't start">
+    Check logs for errors:
+    ```bash
+    docker-compose logs web
+    docker-compose logs db
+    ```
+  </Accordion>
+
+  <Accordion title="Database not initializing">
+    Ensure SQL files are being mounted:
+    ```bash
+    docker exec -it zoo-arcadia-db ls /docker-entrypoint-initdb.d
+    ```
+    
+    If empty, rebuild:
+    ```bash
+    docker-compose down -v
+    docker-compose up -d --build
+    ```
+  </Accordion>
+
+  <Accordion title="Changes not reflecting in browser">
+    **For PHP changes:** Refresh browser (changes are mounted in real-time)
+    
+    **For dependencies:** Rebuild container:
+    ```bash
+    docker-compose up -d --build
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Project Structure
+
+```
+zoo-ARCADIA/
+├── App/                    # Domain-based architecture (MVC per domain)
+│   ├── Animals/
+│   ├── Auth/
+│   ├── Habitats/
+│   └── Services/
+├── public/                 # Front controller and compiled assets
+│   ├── index.php           # Application entry point
+│   └── build/              # Compiled CSS/JS
+├── src/                    # Source SCSS and JavaScript
+│   ├── scss/
+│   └── js/
+├── database/               # Versioned SQL scripts
+│   ├── 01_init.sql
+│   ├── 02_tables.sql
+│   ├── 03_constraints.sql
+│   └── 06_seed_data.sql
+├── includes/               # Shared helpers and layouts
+│   ├── csrf.php
+│   ├── functions.php
+│   └── layouts/
+├── .env                    # Environment configuration
+├── .env.example            # Environment template
+├── composer.json           # PHP dependencies
+├── package.json            # Node.js dependencies
+├── docker-compose.yml      # Docker configuration
+├── gulpfile.js            # Asset build configuration
+└── README.md              # Project documentation
+```
+
+## Next Steps
+
+After successful installation:
+
+1. Explore the codebase architecture in `App/`
+2. Review the front controller pattern in `public/index.php`
+3. Check routing configuration in `App/router.php`
+4. Review security implementations (CSRF tokens, input validation)
+5. Test all user roles (Admin, Veterinary, Employee)
+
+## Additional Resources
+
+- **Project Documentation:** `docs/DOSSIER_PROJET_ZOO_ARCADIA.md`
+- **Live Demo:** [https://zoo-arcadia-production.up.railway.app](https://zoo-arcadia-production.up.railway.app/home/pages/index)
+- **GitHub Repository:** [https://github.com/dumitrusf/zoo-Arcadia](https://github.com/dumitrusf/zoo-Arcadia)

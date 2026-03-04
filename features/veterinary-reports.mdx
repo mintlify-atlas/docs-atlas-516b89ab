@@ -1,0 +1,453 @@
+---
+title: 'Veterinary Health Reports'
+description: 'Creating and managing animal health state reports with nutrition tracking'
+---
+
+## Overview
+
+The veterinary reporting system allows veterinarians to create detailed health assessments for animals, track their mood/condition over time, and monitor nutrition compliance. All reports require the `vet_reports-create`, `vet_reports-edit`, or `vet_reports-view` permissions.
+
+## Creating Health Reports
+
+Creating a report requires the `vet_reports-create` permission:
+
+<Steps>
+  <Step title="Check permissions and display form">
+    ```php
+    public function create()
+    {
+        if (!hasPermission('vet_reports-create')) {
+            header('Location: /vreports/gest/start?msg=error');
+            exit();
+        }
+        
+        $animalModel = new AnimalFull();
+        $animals = $animalModel->getAll();
+        $userId = $_SESSION['user']['id_user'] ?? null;
+        
+        include_once __DIR__ . '/../views/gest/create.php';
+    }
+    ```
+  </Step>
+  
+  <Step title="Validate CSRF token">
+    ```php
+    if (!csrf_verify('vreport_create')) {
+        header('Location: /vreports/gest/create?msg=error');
+        exit();
+    }
+    ```
+  </Step>
+  
+  <Step title="Validate health state">
+    The system validates against 21 allowed health states:
+    
+    ```php
+    $allowedStates = [
+        'healthy', 'sick', 'quarantined', 'injured', 'happy', 'sad',
+        'depressed', 'terminal', 'infant', 'hungry', 'well',
+        'good_condition', 'angry', 'aggressive', 'nervous', 'anxious',
+        'recovering', 'pregnant', 'malnourished', 'dehydrated', 'stressed'
+    ];
+    
+    $state = strtolower(trim($stateRaw));
+    $state = preg_replace('/[^a-z_]/', '', $state);
+    
+    if (empty($state) || !in_array($state, $allowedStates, true)) {
+        header('Location: /vreports/gest/create?msg=error&error=Invalid health state');
+        exit();
+    }
+    ```
+  </Step>
+  
+  <Step title="Validate animal and user exist">
+    ```php
+    // Validate animal exists
+    $animal = $animalModel->getById($fullAnimalId);
+    if (!$animal) {
+        header('Location: /vreports/gest/create?msg=error&error=Animal does not exist');
+        exit();
+    }
+    
+    // Validate user exists
+    $user = User::find($userId);
+    if (!$user) {
+        header('Location: /vreports/gest/create?msg=error&error=User account error');
+        exit();
+    }
+    ```
+  </Step>
+  
+  <Step title="Save the report">
+    ```php
+    $reportModel = new HealthStateReport();
+    $result = $reportModel->create(
+        $fullAnimalId,
+        $state,
+        $reviewDate,
+        $vetObs,
+        $userId,
+        $optDetails
+    );
+    
+    if ($result && is_numeric($result)) {
+        header('Location: /vreports/gest/start?msg=saved');
+        exit();
+    }
+    ```
+  </Step>
+</Steps>
+
+## Health State Categories
+
+The system supports 21 health states organized by severity:
+
+<AccordionGroup>
+  <Accordion title="Positive States (Healthy)" icon="check" iconType="solid">
+    - **healthy**: General good health
+    - **well**: Doing well overall
+    - **good_condition**: In good physical condition
+    - **happy**: Positive emotional state
+    - **recovering**: Improving from illness/injury
+  </Accordion>
+  
+  <Accordion title="Concerning States (Monitor)" icon="triangle-exclamation" iconType="solid">
+    - **sad**: Low mood
+    - **hungry**: Insufficient food intake
+    - **nervous**: Anxious behavior
+    - **anxious**: High stress levels
+    - **stressed**: Under stress
+    - **infant**: Very young animal (needs special care)
+  </Accordion>
+  
+  <Accordion title="Problematic States (Action Required)" icon="exclamation" iconType="solid">
+    - **sick**: Illness present
+    - **injured**: Physical injury
+    - **depressed**: Severe mood issues
+    - **angry**: Aggressive mood
+    - **aggressive**: Dangerous behavior
+    - **malnourished**: Severe nutritional deficiency
+    - **dehydrated**: Insufficient water intake
+  </Accordion>
+  
+  <Accordion title="Critical States (Urgent)" icon="circle-exclamation" iconType="solid">
+    - **quarantined**: Isolated due to contagion risk
+    - **terminal**: End-of-life condition
+    - **pregnant**: Requires special care and monitoring
+  </Accordion>
+</AccordionGroup>
+
+## Report Fields
+
+<ParamField path="full_animal_id" type="integer" required>
+  The ID of the animal from `animal_full` table
+</ParamField>
+
+<ParamField path="hsr_state" type="enum" required>
+  Health state from the 21 allowed values (lowercase with underscores)
+</ParamField>
+
+<ParamField path="review_date" type="date" required>
+  Date of the health check (format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField path="vet_obs" type="text" required>
+  Veterinarian's observation notes
+</ParamField>
+
+<ParamField path="checked_by" type="integer" required>
+  User ID of the veterinarian who created the report
+</ParamField>
+
+<ParamField path="opt_details" type="text">
+  Optional additional details about the animal
+</ParamField>
+
+## Editing Reports
+
+Updating a report requires the `vet_reports-edit` permission:
+
+```php
+public function update()
+{
+    if (!hasPermission('vet_reports-edit')) {
+        header('Location: /vreports/gest/start?msg=error');
+        exit();
+    }
+
+    // Verify CSRF token
+    if (!csrf_verify('vreport_edit')) {
+        $id = $_GET['id'] ?? '';
+        header('Location: /vreports/gest/edit?id=' . $id . '&msg=error');
+        exit();
+    }
+    
+    $id = $_POST['id_hs_report'] ?? null;
+    $fullAnimalId = $_POST['full_animal_id'] ?? null;
+    $state = trim($_POST['hsr_state'] ?? '');
+    $reviewDate = $_POST['review_date'] ?? null;
+    $vetObs = trim($_POST['vet_obs'] ?? '');
+    $optDetails = trim($_POST['opt_details'] ?? '');
+    $userId = $_SESSION['user']['id_user'] ?? null;
+    
+    // SECURITY: Verify animal ID hasn't changed
+    $existingReport = $reportModel->getById($id);
+    if ($existingReport->id_full_animal != $fullAnimalId) {
+        error_log("Security warning: Attempt to change animal ID in report");
+        header('Location: /vreports/gest/edit?id=' . $id . '&msg=error&error=Cannot change the animal for an existing report');
+        exit();
+    }
+    
+    $reportModel->update($id, $state, $reviewDate, $vetObs, $userId, $optDetails);
+}
+```
+
+<Warning>
+  **Historical Integrity**: The system prevents changing which animal a report is about after creation. This ensures the historical record remains accurate.
+</Warning>
+
+## Viewing Reports
+
+Viewing reports requires the `vet_reports-view` permission:
+
+### List All Reports
+
+```php
+public function start()
+{
+    if (!hasPermission('vet_reports-view')) {
+        header('Location: /home/pages/start?msg=error');
+        exit();
+    }
+
+    $reportModel = new HealthStateReport();
+    $animalModel = new AnimalFull();
+    
+    $reports = $reportModel->getAll();
+    $animals = $animalModel->getAll();
+    
+    include_once __DIR__ . '/../views/gest/start.php';
+}
+```
+
+### View Single Report
+
+```php
+public function view()
+{
+    if (!hasPermission('vet_reports-view')) {
+        header('Location: /vreports/gest/start?msg=error');
+        exit();
+    }
+
+    $id = $_GET['id'] ?? null;
+    $report = $reportModel->getById($id);
+    
+    if (!$report) {
+        header('Location: /vreports/gest/start?msg=error&error=Report not found');
+        exit();
+    }
+    
+    include_once __DIR__ . '/../views/gest/view.php';
+}
+```
+
+### Get Latest Report for Animal
+
+This is used on public pages to show current animal health:
+
+```php
+// In HealthStateReport model
+public function getLatestByAnimalId($animalId)
+{
+    $sql = "SELECT hsr.*, 
+                   ag.animal_name,
+                   s.specie_name,
+                   c.category_name,
+                   h.habitat_name,
+                   u.username AS checked_by_username,
+                   r.role_name
+            FROM health_state_reports hsr
+            JOIN animal_full af ON hsr.id_full_animal = af.id_full_animal
+            JOIN animal_general ag ON af.animal_g_id = ag.id_animal_g
+            LEFT JOIN specie s ON ag.specie_id = s.id_specie
+            LEFT JOIN category c ON s.category_id = c.id_category
+            LEFT JOIN habitats h ON af.habitat_id = h.id_habitat
+            LEFT JOIN users u ON hsr.checked_by = u.id_user
+            LEFT JOIN roles r ON u.role_id = r.id_role
+            WHERE hsr.id_full_animal = :animal_id
+            ORDER BY hsr.review_date DESC, hsr.updated_at DESC
+            LIMIT 1";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':animal_id' => $animalId]);
+    return $stmt->fetch(PDO::FETCH_OBJ);
+}
+```
+
+## Nutrition Tracking
+
+Health reports are linked to the animal's nutrition plan, allowing veterinarians to track if the animal is being fed according to plan.
+
+### Comparing Actual vs. Planned Feeding
+
+When viewing feeding logs, the system compares actual feeding to the nutrition plan:
+
+```php
+// In feeding logs query
+$sql = "SELECT fl.*, 
+               ag.animal_name, 
+               af.nutrition_id,
+               n.food_type AS plan_food_type, 
+               n.food_qtty AS plan_food_qtty,
+               n.nutrition_type,
+               u.username AS fed_by_username
+        FROM feeding_logs fl
+        JOIN animal_full af ON fl.animal_f_id = af.id_full_animal
+        JOIN animal_general ag ON af.animal_g_id = ag.id_animal_g
+        LEFT JOIN nutrition n ON af.nutrition_id = n.id_nutrition
+        LEFT JOIN users u ON fl.user_id = u.id_user
+        WHERE fl.animal_f_id = :animal_id
+        ORDER BY fl.food_date DESC";
+```
+
+This allows veterinarians to see:
+- Planned food type vs. actual food type
+- Planned quantity vs. actual quantity
+- Feeding frequency and consistency
+
+<Info>
+  Discrepancies between planned and actual feeding can indicate issues that may affect the animal's health state.
+</Info>
+
+## Generating PDF Reports
+
+The system can generate printable HTML reports:
+
+```php
+public function generatePDF()
+{
+    if (!hasPermission('vet_reports-view')) {
+        header('Location: /vreports/gest/start?msg=error');
+        exit();
+    }
+
+    $id = $_GET['id'] ?? null;
+    $report = $reportModel->getById($id);
+    
+    // Format data
+    $reviewDate = new DateTime($report->review_date);
+    $updatedDate = new DateTime($report->updated_at);
+    $stateName = ucfirst(str_replace('_', ' ', $report->hsr_state));
+    
+    // Generate HTML with print styles
+    $html = '<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Health Report #' . $report->id_hs_report . '</title>
+        <style>
+            /* Print-optimized styles */
+        </style>
+    </head>
+    <body>
+        <!-- Report content -->
+        <button class="print-button" onclick="window.print()">🖨️</button>
+    </body>
+    </html>';
+    
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Content-Disposition: inline; filename="health_report_' . $report->id_hs_report . '.html"');
+    echo $html;
+    exit();
+}
+```
+
+The PDF includes:
+- Report ID and date
+- Animal information (name, species, habitat, gender)
+- Health status with color-coded badge
+- Veterinary observations
+- Optional animal details
+- Veterinarian information
+- Last updated timestamp
+
+<Note>
+  The "PDF" is actually a print-optimized HTML page. Users can use their browser's print function to save as PDF.
+</Note>
+
+## Deleting Reports
+
+Deleting reports requires either `vet_reports-edit` permission or Admin role:
+
+```php
+public function delete()
+{
+    // Check if user has permission to delete
+    $isAdmin = isset($_SESSION['user']['role_name']) && 
+               $_SESSION['user']['role_name'] === 'Admin';
+    
+    if (!hasPermission('vet_reports-edit') && !$isAdmin) {
+        header('Location: /vreports/gest/start?msg=error');
+        exit();
+    }
+
+    $id = $_GET['id'] ?? null;
+    $result = $reportModel->delete($id);
+    
+    if ($result) {
+        header('Location: /vreports/gest/start?msg=deleted');
+    } else {
+        header('Location: /vreports/gest/start?msg=error');
+    }
+    exit();
+}
+```
+
+## Report Filtering
+
+Reports can be filtered by:
+- **Animal**: View all reports for a specific animal
+- **Date range**: Reports within a time period
+- **Health state**: Reports with specific health status
+- **Veterinarian**: Reports created by a specific vet
+
+## Error Handling
+
+The system provides detailed error handling:
+
+```php
+if ($result && is_numeric($result)) {
+    header('Location: /vreports/gest/start?msg=saved');
+    exit();
+} else {
+    // Log detailed error
+    error_log("Failed to save health report. Parameters: full_animal_id=$fullAnimalId, state=$state");
+    
+    // Provide specific error messages
+    $errorMsg = "Failed to save health report.";
+    if (is_array($result) && isset($result['error'])) {
+        $dbError = $result['error'];
+        
+        if (strpos($dbError, 'foreign key') !== false) {
+            $errorMsg = "The selected animal or user does not exist.";
+        } elseif (strpos($dbError, 'Duplicate entry') !== false) {
+            $errorMsg = "A report with this information already exists.";
+        }
+    }
+    
+    header('Location: /vreports/gest/create?msg=error&error=' . urlencode($errorMsg));
+    exit();
+}
+```
+
+## Code Reference
+
+- **VReports Controller**: `App/vreports/controllers/vreports_gest_controller.php:25-681`
+- **HealthStateReport Model**: `App/vreports/models/healthStateReport.php`
+- **Report PDF Generation**: `App/vreports/controllers/vreports_gest_controller.php:421-649`
+
+<Accordion title="Related Features">
+  - [Animal Management](/features/animal-management) - Managing animals
+  - [Feeding Logs](/features/feeding-logs) - Recording animal feeding
+  - [Roles & Permissions](/features/roles-permissions) - Veterinarian permissions
+</Accordion>

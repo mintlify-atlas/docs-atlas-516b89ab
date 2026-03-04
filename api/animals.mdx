@@ -1,0 +1,261 @@
+---
+title: 'Animals API'
+description: 'Retrieve information about animals in the Zoo Arcadia collection'
+---
+
+## Overview
+
+The Animals API provides access to the zoo's animal collection data, including species information, habitats, and images.
+
+## List All Animals
+
+<Note>
+  Returns a complete list of all animals in the zoo with their basic information.
+</Note>
+
+```http
+GET /api/animals
+```
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message describing the operation
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of animal objects
+  
+  <ResponseField name="id" type="integer">
+    Unique identifier for the animal
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Name of the animal
+  </ResponseField>
+  
+  <ResponseField name="gender" type="string">
+    Gender of the animal (e.g., "Male", "Female")
+  </ResponseField>
+  
+  <ResponseField name="species" type="string">
+    Species name of the animal
+  </ResponseField>
+  
+  <ResponseField name="category" type="string">
+    Category/classification of the animal (e.g., "Mammal", "Bird")
+  </ResponseField>
+  
+  <ResponseField name="habitat" type="string">
+    Name of the habitat where the animal resides
+  </ResponseField>
+  
+  <ResponseField name="image" type="string">
+    URL path to the animal's image (original size)
+  </ResponseField>
+  
+  <ResponseField name="image_medium" type="string">
+    URL path to the animal's medium-sized image
+  </ResponseField>
+  
+  <ResponseField name="image_large" type="string">
+    URL path to the animal's large-sized image
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl https://zoo-arcadia.example.com/api/animals
+```
+
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/animals')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://zoo-arcadia.example.com/api/animals')
+animals = response.json()
+print(animals)
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "message": "Animals retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "name": "Simba",
+      "gender": "Male",
+      "species": "Lion",
+      "category": "Mammal",
+      "habitat": "Savannah",
+      "image": "/uploads/animals/lion-simba.jpg",
+      "image_medium": "/uploads/animals/lion-simba-medium.jpg",
+      "image_large": "/uploads/animals/lion-simba-large.jpg"
+    },
+    {
+      "id": 2,
+      "name": "Koko",
+      "gender": "Female",
+      "species": "Gorilla",
+      "category": "Mammal",
+      "habitat": "Jungle",
+      "image": "/uploads/animals/gorilla-koko.jpg",
+      "image_medium": "/uploads/animals/gorilla-koko-medium.jpg",
+      "image_large": "/uploads/animals/gorilla-koko-large.jpg"
+    }
+  ]
+}
+```
+
+## Get Animal by ID
+
+<Note>
+  Retrieves detailed information about a specific animal by its unique identifier.
+</Note>
+
+```http
+GET /api/animals/{id}
+```
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the animal
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message describing the operation
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Animal object containing detailed information
+  
+  <ResponseField name="id" type="integer">
+    Unique identifier for the animal
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Name of the animal
+  </ResponseField>
+  
+  <ResponseField name="gender" type="string">
+    Gender of the animal
+  </ResponseField>
+  
+  <ResponseField name="species" type="string">
+    Species name of the animal
+  </ResponseField>
+  
+  <ResponseField name="category" type="string">
+    Category/classification of the animal
+  </ResponseField>
+  
+  <ResponseField name="habitat" type="string">
+    Name of the habitat where the animal resides
+  </ResponseField>
+  
+  <ResponseField name="image" type="string">
+    URL path to the animal's image (original size)
+  </ResponseField>
+  
+  <ResponseField name="image_medium" type="string">
+    URL path to the animal's medium-sized image
+  </ResponseField>
+  
+  <ResponseField name="image_large" type="string">
+    URL path to the animal's large-sized image
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl https://zoo-arcadia.example.com/api/animals/1
+```
+
+```javascript JavaScript
+fetch('https://zoo-arcadia.example.com/api/animals/1')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://zoo-arcadia.example.com/api/animals/1')
+animal = response.json()
+print(animal)
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "message": "Animal retrieved successfully",
+  "data": {
+    "id": 1,
+    "name": "Simba",
+    "gender": "Male",
+    "species": "Lion",
+    "category": "Mammal",
+    "habitat": "Savannah",
+    "image": "/uploads/animals/lion-simba.jpg",
+    "image_medium": "/uploads/animals/lion-simba-medium.jpg",
+    "image_large": "/uploads/animals/lion-simba-large.jpg"
+  }
+}
+```
+
+## Error Responses
+
+### Invalid Animal ID
+
+When an invalid or non-numeric ID is provided:
+
+```json
+{
+  "error": true,
+  "message": "Invalid animal ID"
+}
+```
+
+**HTTP Status Code:** `400 Bad Request`
+
+### Animal Not Found
+
+When the requested animal ID does not exist:
+
+```json
+{
+  "error": true,
+  "message": "Animal not found"
+}
+```
+
+**HTTP Status Code:** `404 Not Found`

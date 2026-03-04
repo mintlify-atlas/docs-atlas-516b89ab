@@ -1,0 +1,703 @@
+---
+title: Domain Structure
+description: How each domain is organized with its own MVC architecture and routing logic
+---
+
+# Domain Structure
+
+Zoo Arcadia implements a **domain-driven architecture** where each business domain is a self-contained module with its own MVC (Model-View-Controller) structure. This approach makes the codebase "scream" its purpose and keeps related functionality together.
+
+## What is a Domain?
+
+A domain represents a distinct area of business logic:
+
+- **animals**: Managing zoo animals (species, feeding, health)
+- **habitats**: Managing animal habitats and environments
+- **users**: Managing user accounts and authentication
+- **employees**: Managing zoo staff
+- **testimonials**: Managing visitor testimonials
+- **schedules**: Managing zoo opening hours
+- **vreports**: Veterinary health reports
+
+Each domain is **completely self-contained** with its own controllers, models, views, and router.
+
+## Domain Directory Structure
+
+Every domain follows this consistent structure:
+
+```
+App/{domain}/
+├── {domain}Router.php         # Domain entry point
+├── controllers/               # Domain controllers
+│   ├── {domain}_pages_controller.php      # Public pages
+│   ├── {domain}_gest_controller.php       # Management (CRUD)
+│   └── {domain}_{feature}_controller.php  # Feature-specific
+├── models/                    # Domain models (database)
+│   ├── {entity}.php
+│   └── {related}.php
+└── views/                     # Domain views (HTML)
+    ├── pages/                 # Public views
+    ├── gest/                  # Management views
+    └── {feature}/             # Feature views
+```
+
+## Real Domain Examples
+
+<Accordion title="Animals Domain (Complete Structure)">
+
+```
+App/animals/
+├── animalsRouter.php
+├── controllers/
+│   ├── animals_pages_controller.php      # Public listing & detail pages
+│   ├── animals_gest_controller.php       # CRUD management
+│   ├── animals_feeding_controller.php    # Feeding records
+│   └── animals_stats_controller.php      # Click statistics
+├── models/
+│   ├── animalFull.php                    # Complete animal data
+│   ├── animalGeneral.php                 # General animal info
+│   ├── animalClick.php                   # View statistics
+│   ├── specie.php                        # Species taxonomy
+│   └── nutrition.php                     # Nutrition types
+└── views/
+    ├── pages/
+    │   ├── allanimals.php                # Public listing page
+    │   └── animalpicked.php              # Public detail page
+    ├── gest/
+    │   ├── list.php                      # Admin animal list
+    │   ├── create.php                    # Create form
+    │   ├── edit.php                      # Edit form
+    │   └── delete.php                    # Delete confirmation
+    └── feeding/
+        ├── list.php                      # Feeding records list
+        └── add.php                       # Add feeding record
+```
+
+</Accordion>
+
+<Accordion title="Habitats Domain (Complete Structure)">
+
+```
+App/habitats/
+├── habitatsRouter.php
+├── controllers/
+│   ├── habitats_pages_controller.php     # Public pages
+│   ├── habitats_gest_controller.php      # CRUD management
+│   └── habitats_suggestion_controller.php # Vet suggestions
+├── models/
+│   ├── habitat.php                       # Habitat data
+│   └── suggestion.php                    # Vet suggestions
+└── views/
+    ├── pages/
+    │   ├── habitats.php                  # Public listing
+    │   └── habitat1.php                  # Individual habitat
+    ├── gest/
+    │   ├── list.php
+    │   ├── create.php
+    │   └── edit.php
+    └── suggestion/
+        ├── list.php
+        └── create.php
+```
+
+</Accordion>
+
+<Accordion title="Users Domain (Complete Structure)">
+
+```
+App/users/
+├── usersRouter.php
+├── controllers/
+│   └── users_gest_controller.php         # User management
+├── models/
+│   ├── user.php                          # User data & auth
+│   └── role.php                          # User roles
+└── views/
+    └── gest/
+        ├── list.php                      # User list
+        ├── create.php                    # Create user
+        ├── edit.php                      # Edit user
+        └── permissions.php               # Manage permissions
+```
+
+</Accordion>
+
+## The Domain Router
+
+Each domain has a simple router file that delegates to the `handleDomainRouting()` function:
+
+<CodeGroup>
+
+```php App/animals/animalsRouter.php
+<?php
+/**
+ * 🏛️ ARCHITECTURE ARCADIA (Simulated Namespace)
+ * ----------------------------------------------------
+ * 📍 Logical Path: Arcadia\Animals
+ * 📂 Physical File:   App/animals/animalsRouter.php
+ * 
+ * 📝 Description:
+ * Router for the Animals domain.
+ * Handles incoming requests and delegates to the appropriate controller.
+ * 
+ * 🔗 Dependencies:
+ * - Arcadia\Includes\Functions (via includes/functions.php)
+ */
+
+require_once __DIR__ . '/../../includes/functions.php';
+handleDomainRouting('animals', __DIR__);
+```
+
+```php App/users/usersRouter.php
+<?php
+require_once __DIR__ . '/../../includes/functions.php';
+handleDomainRouting('users', __DIR__);
+```
+
+```php App/habitats/habitatsRouter.php
+<?php
+require_once __DIR__ . '/../../includes/functions.php';
+handleDomainRouting('habitats', __DIR__);
+```
+
+</CodeGroup>
+
+This minimal boilerplate keeps domain routers simple and consistent.
+
+## The handleDomainRouting Function
+
+The magic happens in `includes/functions.php` with the `handleDomainRouting()` function:
+
+```php includes/functions.php
+function handleDomainRouting($domainName, $basePath)
+{
+    // 1. Get routing parameters
+    $controller = $_GET['controller'] ?? 'pages';
+    $action = $_GET['action'] ?? 'start';
+
+    // 2. Convert hyphenated actions to camelCase
+    // URL: /auth/pages/forgot-password → Method: forgotPassword()
+    $action = str_replace('-', '', ucwords($action, '-'));
+    $action = lcfirst($action);
+
+    // 3. Build controller file name and class name
+    // Example: animals + pages → animals_pages_controller.php
+    //                          → AnimalsPagesController
+    $controllerFileName = $domainName . "_" . $controller . "_controller.php";
+    $controllerClassName = ucfirst($domainName) . ucfirst($controller) . "Controller";
+
+    $controllerFile = $basePath . "/controllers/" . $controllerFileName;
+
+    // 4. Load controller file
+    if (file_exists($controllerFile)) {
+        require_once $controllerFile;
+
+        // 5. Check if controller class exists
+        if (!class_exists($controllerClassName)) {
+            http_response_code(404);
+            echo "Error: Controller class '$controllerClassName' not found.";
+            exit();
+        }
+
+        // 6. Instantiate controller
+        $controllerInstance = new $controllerClassName();
+        
+        // 7. Check if action method exists
+        if (!method_exists($controllerInstance, $action)) {
+            http_response_code(404);
+            echo "Error 404: The action '$action' does not exist.";
+            exit();
+        }
+
+        // 8. Execute action and capture output
+        ob_start();
+        $controllerInstance->$action();
+        $viewContent = ob_get_clean();
+
+        // 9. Select appropriate layout (public or back-office)
+        $public_layout_map = [
+            "home"      => ["index"],
+            "about"     => ["about"],
+            "habitats"  => ["habitats", "habitat1"],
+            "animals"   => ["allanimals", "animalpicked"],
+            "contact"   => ["contact", "submit"],
+            "auth"      => ["login"],
+            "testimonials" => ["create"]
+        ];
+
+        $domainKey = strtolower($domainName);
+        $actionKey = strtolower($action);
+
+        $usePublicLayout = false;
+        if (isset($public_layout_map[$domainKey])) {
+            $allowedActions = $public_layout_map[$domainKey];
+            $usePublicLayout = empty($allowedActions) || 
+                             in_array($actionKey, $allowedActions, true);
+        }
+
+        // 10. Apply layout
+        if ($usePublicLayout) {
+            require __DIR__ . "/layouts/FC_main_layout.php";
+        } else {
+            require __DIR__ . "/layouts/BO_main_layout.php";
+        }
+    } else {
+        http_response_code(404);
+        header('Location: /public/error-404.php');
+        exit();
+    }
+}
+```
+
+### Step-by-Step Breakdown
+
+<Steps>
+  <Step title="Extract Routing Parameters">
+    Gets `controller` and `action` from `$_GET` with sensible defaults:
+    
+    ```php
+    $controller = $_GET['controller'] ?? 'pages';  // Default: 'pages'
+    $action = $_GET['action'] ?? 'start';          // Default: 'start'
+    ```
+  </Step>
+
+  <Step title="Convert Action to camelCase">
+    Transforms hyphenated URLs to valid PHP method names:
+    
+    ```php
+    // "forgot-password" → "forgotPassword"
+    $action = str_replace('-', '', ucwords($action, '-'));
+    $action = lcfirst($action);
+    ```
+    
+    This allows clean URLs like `/auth/pages/forgot-password` while keeping valid method names.
+  </Step>
+
+  <Step title="Build File and Class Names">
+    Constructs standardized names following the naming convention:
+    
+    ```php
+    // Domain: animals, Controller: pages
+    $controllerFileName = "animals_pages_controller.php";
+    $controllerClassName = "AnimalsPagesController";
+    ```
+  </Step>
+
+  <Step title="Load and Validate Controller">
+    Loads the controller file and checks if the class exists:
+    
+    ```php
+    require_once $controllerFile;
+    
+    if (!class_exists($controllerClassName)) {
+        // Error: file exists but class missing
+        http_response_code(404);
+        exit();
+    }
+    ```
+  </Step>
+
+  <Step title="Instantiate and Execute">
+    Creates the controller instance and calls the action method:
+    
+    ```php
+    $controllerInstance = new $controllerClassName();
+    
+    if (!method_exists($controllerInstance, $action)) {
+        // Error: method doesn't exist
+        http_response_code(404);
+        exit();
+    }
+    
+    ob_start();
+    $controllerInstance->$action();
+    $viewContent = ob_get_clean();
+    ```
+    
+    Output buffering captures the view output for layout wrapping.
+  </Step>
+
+  <Step title="Select Layout">
+    Determines whether to use public (FC) or back-office (BO) layout:
+    
+    ```php
+    if ($usePublicLayout) {
+        require __DIR__ . "/layouts/FC_main_layout.php";
+    } else {
+        require __DIR__ . "/layouts/BO_main_layout.php";
+    }
+    ```
+  </Step>
+</Steps>
+
+## Controller Example
+
+Here's a real controller from the Animals domain:
+
+```php App/animals/controllers/animals_pages_controller.php
+<?php
+require_once __DIR__ . '/../../hero/models/Hero.php';
+require_once __DIR__ . '/../models/animalFull.php';
+require_once __DIR__ . '/../models/specie.php';
+require_once __DIR__ . '/../../habitats/models/habitat.php';
+require_once __DIR__ . '/../models/nutrition.php';
+
+class AnimalsPagesController {
+    
+    // Public action: /animals/pages/allanimals
+    public function allanimals() {
+        // 1. Get Hero for page header
+        $heroModel = new Hero();
+        $hero = $heroModel->getByPage('animals');
+
+        // 2. Get all animals
+        $animalModel = new AnimalFull();
+        $animals = $animalModel->getAll();
+
+        // 3. Get filter data
+        $specieModel = new specie();
+        $habitatModel = new Habitat();
+        $nutritionModel = new Nutrition();
+        
+        $species = $specieModel->getAll();
+        $habitats = $habitatModel->getAll();
+        $nutritions = $nutritionModel->getAll();
+
+        // 4. Load view
+        include_once __DIR__ . '/../views/pages/allanimals.php';
+    }
+
+    // Public action: /animals/pages/animalpicked?id=5
+    public function animalpicked() {
+        // 1. Get animal ID from URL parameter
+        $id = $_GET['id'] ?? null;
+        
+        if (!$id) {
+            header('Location: /animals/pages/allanimals');
+            exit;
+        }
+
+        // 2. Get animal data
+        $animalModel = new AnimalFull();
+        $animal = $animalModel->getById($id);
+        
+        if (!$animal) {
+            header('Location: /animals/pages/allanimals');
+            exit;
+        }
+        
+        // 3. Register click for statistics
+        if (!isset($_SESSION['animal_clicks'])) {
+            $_SESSION['animal_clicks'] = [];
+        }
+        
+        if (!in_array($animal->animal_g_id, $_SESSION['animal_clicks'])) {
+            $clickModel = new AnimalClick();
+            $clickModel->registerClick($animal->animal_g_id);
+            $_SESSION['animal_clicks'][] = $animal->animal_g_id;
+        }
+        
+        // 4. Load view
+        include_once __DIR__ . '/../views/pages/animalpicked.php';
+    }
+}
+```
+
+### Controller Responsibilities
+
+Controllers in Zoo Arcadia follow the MVC pattern:
+
+1. **Receive input**: Get parameters from `$_GET`, `$_POST`, `$_SESSION`
+2. **Validate input**: Check required parameters, validate permissions
+3. **Load models**: Instantiate required models for data access
+4. **Process logic**: Execute business logic (calculations, validations)
+5. **Prepare data**: Format data for the view
+6. **Load view**: Include the appropriate view file
+
+<Note>
+Controllers should NOT contain HTML or SQL. HTML goes in views, SQL goes in models. Controllers orchestrate the flow.
+</Note>
+
+## Model Example
+
+Models handle all database interactions:
+
+```php App/animals/models/animalFull.php
+<?php
+require_once __DIR__ . '/../../../database/connection.php';
+
+class AnimalFull {
+    private $conn;
+    private $table = 'animal_full_view';
+
+    public function __construct() {
+        $this->conn = Database::getInstance()->getConnection();
+    }
+
+    // Get all animals
+    public function getAll() {
+        $query = "SELECT * FROM {$this->table} ORDER BY animal_f_name ASC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    // Get single animal by ID
+    public function getById($id) {
+        $query = "SELECT * FROM {$this->table} WHERE id_full_animal = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_OBJ);
+    }
+
+    // Create new animal
+    public function create($data) {
+        $query = "INSERT INTO animals (name, species_id, habitat_id) 
+                  VALUES (:name, :species_id, :habitat_id)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':name', $data['name']);
+        $stmt->bindParam(':species_id', $data['species_id']);
+        $stmt->bindParam(':habitat_id', $data['habitat_id']);
+        return $stmt->execute();
+    }
+}
+```
+
+### Model Responsibilities
+
+1. **Database connection**: Use singleton connection from `Database::getInstance()`
+2. **Data retrieval**: SELECT queries
+3. **Data persistence**: INSERT, UPDATE, DELETE queries
+4. **Data validation**: Basic validation before database operations
+5. **Return data objects**: Use `PDO::FETCH_OBJ` for clean data structures
+
+## View Example
+
+Views contain only presentation logic:
+
+```php App/animals/views/pages/allanimals.php
+<div class="animals-page">
+    <!-- Hero Section -->
+    <?php if (isset($hero)): ?>
+    <section class="hero" style="background-image: url('<?= $hero->image_url ?>')">
+        <h1><?= htmlspecialchars($hero->title) ?></h1>
+        <p><?= htmlspecialchars($hero->subtitle) ?></p>
+    </section>
+    <?php endif; ?>
+
+    <!-- Filters -->
+    <section class="filters">
+        <select id="species-filter">
+            <option value="">All Species</option>
+            <?php foreach ($species as $specie): ?>
+            <option value="<?= $specie->id_specie ?>">
+                <?= htmlspecialchars($specie->specie_name) ?>
+            </option>
+            <?php endforeach; ?>
+        </select>
+
+        <select id="habitat-filter">
+            <option value="">All Habitats</option>
+            <?php foreach ($habitats as $habitat): ?>
+            <option value="<?= $habitat->id_habitat ?>">
+                <?= htmlspecialchars($habitat->hab_name) ?>
+            </option>
+            <?php endforeach; ?>
+        </select>
+    </section>
+
+    <!-- Animals Grid -->
+    <section class="animals-grid">
+        <?php foreach ($animals as $animal): ?>
+        <div class="animal-card">
+            <img src="<?= $animal->animal_f_image ?>" 
+                 alt="<?= htmlspecialchars($animal->animal_f_name) ?>">
+            <h3><?= htmlspecialchars($animal->animal_f_name) ?></h3>
+            <p><?= htmlspecialchars($animal->specie_name) ?></p>
+            <a href="/animals/pages/animalpicked?id=<?= $animal->id_full_animal ?>">
+                View Details
+            </a>
+        </div>
+        <?php endforeach; ?>
+    </section>
+</div>
+```
+
+### View Responsibilities
+
+1. **Display data**: Show data passed from controller
+2. **HTML structure**: Semantic HTML markup
+3. **Escape output**: Use `htmlspecialchars()` to prevent XSS
+4. **Minimal logic**: Only presentation logic (loops, conditionals)
+5. **No database**: Never query database directly
+
+<Warning>
+Always escape user-generated content with `htmlspecialchars()` to prevent XSS attacks. Never trust data, even from your own database.
+</Warning>
+
+## Naming Conventions
+
+Zoo Arcadia follows strict naming conventions:
+
+<CodeGroup>
+
+```text Controller Files
+Pattern: {domain}_{controller}_controller.php
+
+Examples:
+- animals_pages_controller.php
+- animals_gest_controller.php
+- users_gest_controller.php
+- habitats_pages_controller.php
+```
+
+```text Controller Classes
+Pattern: {Domain}{Controller}Controller
+
+Examples:
+- AnimalsPagesController
+- AnimalsGestController
+- UsersGestController
+- HabitatsPagesController
+```
+
+```text Controller Methods
+Pattern: camelCase
+
+Examples:
+- allanimals()
+- animalpicked()
+- create()
+- edit()
+- forgotPassword()
+```
+
+```text Model Files
+Pattern: {entity}.php (lowercase)
+
+Examples:
+- animalFull.php
+- user.php
+- habitat.php
+- specie.php
+```
+
+```text Model Classes
+Pattern: {Entity} (PascalCase)
+
+Examples:
+- AnimalFull
+- User
+- Habitat
+- Specie
+```
+
+</CodeGroup>
+
+## Layout Selection
+
+The `handleDomainRouting()` function automatically selects the appropriate layout:
+
+- **FC_main_layout.php** (Front Office): Public pages with visitor navigation
+- **BO_main_layout.php** (Back Office): Admin pages with dashboard navigation
+
+```php Layout Selection Logic
+$public_layout_map = [
+    "home"      => ["index"],              // Only homepage is public
+    "about"     => ["about"],              // About page
+    "habitats"  => ["habitats", "habitat1"], // Public habitat pages
+    "animals"   => ["allanimals", "animalpicked"], // Public animal pages
+    "contact"   => ["contact", "submit"],  // Contact form
+    "auth"      => ["login"],              // Login page
+    "testimonials" => ["create"]           // Public testimonial creation
+];
+
+// Any action not in the map uses back-office layout
+```
+
+## Adding a New Domain
+
+To add a new domain to Zoo Arcadia:
+
+<Steps>
+  <Step title="Create Domain Directory">
+    ```bash
+    mkdir -p App/mydomain/controllers
+    mkdir -p App/mydomain/models
+    mkdir -p App/mydomain/views/pages
+    mkdir -p App/mydomain/views/gest
+    ```
+  </Step>
+
+  <Step title="Create Domain Router">
+    ```php App/mydomain/mydomainRouter.php
+    <?php
+    require_once __DIR__ . '/../../includes/functions.php';
+    handleDomainRouting('mydomain', __DIR__);
+    ```
+  </Step>
+
+  <Step title="Create Controller">
+    ```php App/mydomain/controllers/mydomain_pages_controller.php
+    <?php
+    class MydomainPagesController {
+        public function index() {
+            // Load data
+            include_once __DIR__ . '/../views/pages/index.php';
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Create Model">
+    ```php App/mydomain/models/myentity.php
+    <?php
+    require_once __DIR__ . '/../../../database/connection.php';
+
+    class MyEntity {
+        private $conn;
+        
+        public function __construct() {
+            $this->conn = Database::getInstance()->getConnection();
+        }
+        
+        public function getAll() {
+            // Query logic
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Create View">
+    ```php App/mydomain/views/pages/index.php
+    <h1>My Domain</h1>
+    <!-- View content -->
+    ```
+  </Step>
+
+  <Step title="Add to Central Router">
+    ```php App/router.php
+    $allowed_domains = [
+        // ... existing domains ...
+        "mydomain"  // Add your domain
+    ];
+    
+    $public_domains = [
+        // ... existing domains ...
+        "mydomain"  // If public
+    ];
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/features/authentication">
+    Implement user authentication and sessions
+  </Card>
+  <Card title="Database" icon="database" href="/development/database-schema">
+    Work with models and database queries
+  </Card>
+</CardGroup>

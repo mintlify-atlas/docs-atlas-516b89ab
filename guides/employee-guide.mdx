@@ -1,0 +1,466 @@
+---
+title: Employee Guide
+description: Guide for Zoo Arcadia employees managing daily operations, feeding logs, testimonial moderation, and service updates.
+---
+
+## Overview
+
+As a Zoo Arcadia employee, you play a crucial role in daily animal care and visitor experience management. This guide covers your primary responsibilities: recording animal feedings, moderating visitor testimonials, and updating service information.
+
+## Employee Dashboard
+
+Your dashboard at `/home/pages/start` provides quick access to:
+
+- Recent feeding logs you've created
+- Pending testimonials requiring moderation
+- Service update notifications
+- Contact form submissions from visitors
+- Your recent activity summary
+
+<Tip>
+  Start each shift by checking your dashboard to see pending tasks and recent updates.
+</Tip>
+
+## Managing Feeding Logs
+
+Accurate feeding records are essential for animal health monitoring and veterinary care.
+
+### Viewing All Feeding Logs
+
+Navigate to `/animals/feeding/start` to see all feeding records:
+
+- Animal name and species
+- Food type provided
+- Quantity (in grams)
+- Feeding date and time
+- Employee who performed the feeding
+
+<CardGroup cols={2}>
+  <Card title="Filter by Animal" icon="filter">
+    Click on an animal to view its complete feeding history.
+  </Card>
+  
+  <Card title="Recent Feedings" icon="clock">
+    Sort by date to see the most recent feedings first.
+  </Card>
+</CardGroup>
+
+### Recording Animal Feedings
+
+Every time you feed an animal, create a feeding log entry.
+
+<Steps>
+  <Step title="Access Feeding Log Creation">
+    Go to `/animals/feeding/create` or click "Record Feeding" from the dashboard.
+  </Step>
+  
+  <Step title="Select the Animal">
+    Choose which animal you fed from the dropdown list. Animals are organized by name.
+  </Step>
+  
+  <Step title="Choose Food Type">
+    Select the type of food provided:
+    - **Meat**: For carnivores
+    - **Fruit**: For frugivores and some omnivores
+    - **Legumes**: For herbivores
+    - **Insect**: For insectivores and some omnivores
+  </Step>
+  
+  <Step title="Enter Quantity">
+    Record the amount of food in grams. Be accurate - this data is used by veterinarians to monitor animal health.
+  </Step>
+  
+  <Step title="Set Feeding Date">
+    Enter the date of feeding. This defaults to today but can be changed if you're recording a past feeding.
+  </Step>
+  
+  <Step title="Submit">
+    Click Save. The log is automatically attributed to your user account.
+  </Step>
+</Steps>
+
+<Note>
+  The quantity must be a positive number greater than 0. The system validates this to ensure data accuracy.
+</Note>
+
+### Viewing Feeding History by Animal
+
+To see all feedings for a specific animal:
+
+1. Go to `/animals/feeding/start`
+2. Click on the animal's name
+3. View complete feeding history at `/animals/feeding/view?animal_id={id}`
+
+This view shows:
+
+- All feeding records chronologically
+- Total food provided over time
+- Last feeding date and details
+- Feeding pattern analysis
+
+### Deleting Feeding Logs
+
+If you recorded a feeding in error:
+
+1. Navigate to the feeding log list
+2. Click "Delete" next to the incorrect entry
+3. Confirm deletion
+
+<Warning>
+  Only delete feeding logs that were recorded by mistake. Accurate records are essential for veterinary care.
+</Warning>
+
+## Moderating Testimonials
+
+Visitors can submit testimonials through the public website. As an employee, you review and moderate these submissions before they appear publicly.
+
+### Accessing Testimonial Management
+
+Navigate to `/testimonials/gest/start` to see all testimonials:
+
+- Pending (awaiting moderation)
+- Validated (approved and visible to public)
+- Rejected (not approved for publication)
+
+<Tip>
+  Use the status filter at the top to view only pending testimonials that need your attention.
+</Tip>
+
+### Validating Testimonials
+
+To approve a testimonial for public display:
+
+<Steps>
+  <Step title="Review Content">
+    Read the testimonial carefully:
+    - Check for appropriate language
+    - Verify the content is relevant to the zoo
+    - Ensure there's no spam or promotional content
+    - Confirm the rating (1-5 stars) matches the message tone
+  </Step>
+  
+  <Step title="Click Validate">
+    If the testimonial is appropriate, click the "Validate" button.
+  </Step>
+  
+  <Step title="Confirmation">
+    The testimonial status changes to "Validated" and it becomes visible on the public website.
+  </Step>
+</Steps>
+
+### Rejecting Testimonials
+
+Reject testimonials that contain:
+
+- Inappropriate language or content
+- Spam or advertising
+- Off-topic comments
+- Fake or obviously fraudulent reviews
+
+<Steps>
+  <Step title="Review the Testimonial">
+    Verify it doesn't meet publication standards.
+  </Step>
+  
+  <Step title="Click Reject">
+    Click the "Reject" button to mark it as not approved.
+  </Step>
+  
+  <Step title="Status Update">
+    The testimonial is marked as rejected and will not appear publicly.
+  </Step>
+</Steps>
+
+<Note>
+  Both validation and rejection actions are logged with your user ID and timestamp for accountability.
+</Note>
+
+### Editing Testimonials Before Validation
+
+If a testimonial has minor issues (typos, formatting) but is otherwise good:
+
+<Steps>
+  <Step title="Click Edit">
+    Access `/testimonials/gest/edit?id={testimonial_id}`.
+  </Step>
+  
+  <Step title="Modify Content">
+    You can edit:
+    - Pseudonym (visitor's name)
+    - Message text
+    - Rating (1-5 stars)
+  </Step>
+  
+  <Step title="Validate After Editing (Optional)">
+    Check the "Validate after edit" checkbox to approve the testimonial immediately after saving your changes.
+  </Step>
+  
+  <Step title="Save">
+    Submit the form to update the testimonial.
+  </Step>
+</Steps>
+
+<Tip>
+  Use editing to fix minor typos or format issues in otherwise good testimonials. Don't make substantial changes to the visitor's message.
+</Tip>
+
+### Deleting Testimonials
+
+To permanently remove a testimonial:
+
+1. From the testimonial list, click "Delete"
+2. Confirm the deletion
+3. The testimonial is permanently removed from the database
+
+<Warning>
+  Deletion is permanent and cannot be undone. Consider rejecting instead of deleting unless the testimonial is spam or violates terms of service.
+</Warning>
+
+### Testimonial Statistics
+
+The testimonial dashboard shows:
+
+- **Total testimonials**: All submissions received
+- **Pending**: Awaiting moderation
+- **Validated**: Approved and public
+- **Rejected**: Not approved
+- **Average rating**: Overall visitor satisfaction score
+
+## Updating Service Information
+
+Depending on your permissions, you may be able to update zoo service information.
+
+### Viewing Services
+
+Navigate to `/cms/gest/start` to see all zoo services:
+
+- Service name
+- Description
+- Type (category)
+- Featured status
+- Associated images
+
+### Editing Service Details
+
+If you have edit permissions:
+
+<Steps>
+  <Step title="Select Service">
+    Click "Edit" on the service you want to update.
+  </Step>
+  
+  <Step title="Update Information">
+    Modify:
+    - Service title
+    - Description
+    - Link (URL for more information)
+    - Type/category
+  </Step>
+  
+  <Step title="Update Images (Optional)">
+    Upload new images if the service offering has changed:
+    - Mobile image
+    - Tablet image
+    - Desktop image
+  </Step>
+  
+  <Step title="Save Changes">
+    Submit the form. All changes are logged with your user ID.
+  </Step>
+</Steps>
+
+<Note>
+  Service updates are logged in the system. Administrators can view a complete history of changes at `/cms/gest/logs`.
+</Note>
+
+## Daily Operational Tasks
+
+### Morning Routine
+
+<Steps>
+  <Step title="Check Dashboard">
+    Review pending tasks and overnight activity.
+  </Step>
+  
+  <Step title="Review Feeding Schedule">
+    Check which animals need to be fed and their nutrition plans.
+  </Step>
+  
+  <Step title="Check Testimonials">
+    Moderate any new testimonials submitted overnight.
+  </Step>
+</Steps>
+
+### During Operating Hours
+
+<Steps>
+  <Step title="Record Feedings">
+    Log each feeding immediately after completion while details are fresh.
+  </Step>
+  
+  <Step title="Monitor Testimonials">
+    Check periodically for new submissions and moderate them promptly.
+  </Step>
+  
+  <Step title="Respond to Contact Forms">
+    If you have access, review and respond to visitor inquiries.
+  </Step>
+</Steps>
+
+### End of Day
+
+<Steps>
+  <Step title="Verify All Feedings Recorded">
+    Ensure all animals fed today have logged entries.
+  </Step>
+  
+  <Step title="Clear Pending Testimonials">
+    Moderate any remaining pending testimonials.
+  </Step>
+  
+  <Step title="Note Any Issues">
+    Report any animal health concerns or facility issues to administrators.
+  </Step>
+</Steps>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Immediate Logging" icon="bolt">
+    Record feedings immediately after completion to ensure accuracy and prevent forgetting details.
+  </Card>
+  
+  <Card title="Accurate Quantities" icon="scale-balanced">
+    Use scales to measure food quantities precisely. Estimates can affect veterinary care decisions.
+  </Card>
+  
+  <Card title="Fair Moderation" icon="balance-scale">
+    Moderate testimonials objectively. Approve both positive and constructive feedback that follows guidelines.
+  </Card>
+  
+  <Card title="Timely Responses" icon="clock">
+    Moderate testimonials within 24 hours of submission to show visitors their feedback is valued.
+  </Card>
+</CardGroup>
+
+## Coordinating with Other Roles
+
+### Working with Veterinarians
+
+- **Feeding Logs**: Veterinarians review your feeding logs to monitor animal nutrition
+- **Health Concerns**: Report any unusual eating behavior or animal health observations
+- **Nutrition Changes**: Implement new feeding plans documented in health reports
+
+### Working with Administrators
+
+- **Permission Issues**: Contact admins if you can't access needed features
+- **Animal Updates**: Request animal information updates if you notice discrepancies
+- **Technical Problems**: Report system issues or bugs
+
+## Troubleshooting
+
+### Cannot Record Feeding
+
+**Issue**: The feeding log form won't submit.
+
+**Solutions**:
+1. Verify all required fields are filled:
+   - Animal selected
+   - Food type chosen
+   - Quantity entered (must be > 0)
+   - Date provided
+2. Check that you're logged in (session active)
+3. Ensure you have `animal_feeding-assign` permission
+
+### Animal Not in Dropdown
+
+**Issue**: The animal you fed isn't in the list.
+
+**Solutions**:
+1. Refresh the page to reload the animal list
+2. Check if the animal name is spelled differently than expected
+3. Contact an administrator - the animal may not be in the system yet
+
+### Testimonial Won't Validate
+
+**Issue**: Click validate but the testimonial stays pending.
+
+**Solutions**:
+1. Refresh the page and try again
+2. Check that you have Employee or Admin role
+3. Verify you're logged in
+4. Contact technical support if the issue persists
+
+### Permission Denied Error
+
+**Issue**: You get "Permission Denied" when trying to access a feature.
+
+**Solutions**:
+1. Verify your account has the Employee role
+2. Contact an administrator to check your specific permissions
+3. Ensure your account is active (not deactivated)
+
+## Mobile Access
+
+<Tip>
+  The system is mobile-responsive. You can record feedings from a tablet or smartphone while working in animal habitats.
+</Tip>
+
+Mobile tips:
+- Bookmark `/animals/feeding/create` for quick access
+- Use your device's camera to photograph feeding if needed (for reference)
+- The interface adapts to smaller screens automatically
+
+## Security Reminders
+
+<Warning>
+  - Log out when leaving a shared workstation
+  - Never share your login credentials
+  - Report suspicious activity immediately
+  - Ensure feeding logs are accurate - they affect animal health decisions
+</Warning>
+
+## Getting Help
+
+If you need assistance:
+
+1. **Technical Issues**: Contact your administrator
+2. **Training**: Ask for refresher training if you're unsure about procedures
+3. **Animal Health Concerns**: Immediately contact the veterinary team
+4. **Emergency**: Follow zoo emergency protocols (not a system function)
+
+## Quick Reference
+
+### Common URLs
+
+- Dashboard: `/home/pages/start`
+- Record Feeding: `/animals/feeding/create`
+- View Feedings: `/animals/feeding/start`
+- Moderate Testimonials: `/testimonials/gest/start`
+- Service Management: `/cms/gest/start`
+
+### Food Types
+
+- **Meat**: Carnivores (lions, tigers, etc.)
+- **Fruit**: Frugivores (monkeys, parrots, etc.)
+- **Legumes**: Herbivores (elephants, giraffes, etc.)
+- **Insect**: Insectivores (meerkats, some birds, etc.)
+
+### Testimonial Moderation Guidelines
+
+**Approve if:**
+- Content is relevant to zoo experience
+- Language is appropriate
+- Rating matches message sentiment
+- No spam or promotional content
+
+**Reject if:**
+- Inappropriate language
+- Spam or advertising
+- Off-topic
+- Obviously fake
+
+**Edit then approve if:**
+- Minor typos or formatting issues
+- Small corrections needed
+- Message is otherwise appropriate
