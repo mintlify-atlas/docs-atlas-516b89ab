@@ -1,0 +1,126 @@
+{
+  "projectType": "saas",
+  "projectName": "Zoo Arcadia",
+  "projectDescription": "A comprehensive zoo management system with role-based access control for visitors, employees, veterinarians, and administrators.",
+  "theme": "almond",
+  "primaryColor": "#2d5016",
+  "lightColor": "#5a9e3d",
+  "darkColor": "#1a3009",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/front-controller",
+              "architecture/routing",
+              "architecture/domain-structure"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/authentication",
+              "features/roles-permissions",
+              "features/animal-management",
+              "features/habitat-management",
+              "features/veterinary-reports",
+              "features/feeding-logs",
+              "features/visitor-features"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/admin-guide",
+              "guides/veterinary-guide",
+              "guides/employee-guide",
+              "guides/visitor-guide"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/environment-setup",
+              "development/docker-deployment",
+              "development/database-schema",
+              "development/asset-pipeline"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/animals",
+              "api/habitats",
+              "api/services",
+              "api/schedules",
+              "api/testimonials"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Role-based access control (Admin, Veterinarian, Employee)",
+    "Animal management with health tracking and feeding logs",
+    "Habitat management with visitor suggestions",
+    "Veterinary health reports and nutrition tracking",
+    "Public API for animal and habitat data",
+    "Contact form and testimonials system",
+    "Responsive design with Bootstrap 5",
+    "Docker support for easy deployment",
+    "Session management with CSRF protection",
+    "Click tracking for popular animals"
+  ],
+  "publicApiSurface": [
+    "GET /api/animals - List all animals",
+    "GET /api/animals/{id} - Get animal by ID",
+    "GET /api/habitats - List all habitats",
+    "GET /api/habitats/{id} - Get habitat by ID",
+    "GET /api/services - List all services",
+    "GET /api/schedules - Get zoo schedules",
+    "GET /api/testimonials - Get validated testimonials",
+    "/auth/pages/login - User authentication",
+    "/auth/pages/logout - User logout",
+    "/home/pages/index - Public homepage",
+    "/home/pages/start - Dashboard (authenticated)",
+    "/animals/pages/allanimals - Browse animals",
+    "/animals/pages/animalpicked - Animal details",
+    "/animals/feeding/* - Feeding management (employee)",
+    "/animals/gest/* - Animal CRUD (admin)",
+    "/habitats/pages/* - Browse habitats",
+    "/habitats/gest/* - Habitat CRUD (admin)",
+    "/vreports/* - Veterinary reports",
+    "/users/gest/* - User management (admin)",
+    "/employees/gest/* - Employee management (admin)",
+    "/roles/gest/* - Role management (admin)",
+    "/permissions/gest/* - Permission management (admin)",
+    "/testimonials/pages/* - Public testimonials",
+    "/testimonials/gest/* - Testimonial moderation (employee)",
+    "/contact/pages/form - Contact form"
+  ]
+}
